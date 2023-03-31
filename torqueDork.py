@@ -1,46 +1,91 @@
 """
     Author: Alexander Henriksen
-    Data: December 2022
+    Date: December 2022
     Description: This script was made to plot compute statistics for users on the Translation server.
                  These statistics include memory and core efficiency as well as overall carbon load.
-                 The script takes a .csv file as input.
+                 This script gathers data from a pre-defined sqlite database.
                  Carbon load is calculated using the ScienceFarts module.
     
     Input:
-        1) A .csv input file containing job logs from Torque
-        2) A user name (optional)
+        1)  A path to a sqlite database file (optional)
         Flags:
+            -d: Database path - in case you don't want to use the default.
+            -p: Period - How many days into the past should data be collected?
             -u: User name
             -c: Dont calculate carbon load (default is to calculate it)
     Output:
         None - the script simply prints the results to the terminal.
 
     USAGE:
-        python torqueDork.py <torque_logfile> -u <user> -m <metric>
+        python torqueDork.py  -u <user_name> -p <days>
 
     TO DO:
         - Combine different metrics into a single metric
+        - Add default file to read from (scrapeTorque.py output)
 
     IDEAS:
+        - Change output of scrapeTorque.py so that the output is 
+          summary statistics and so that TorqueDork.py simply
+          reads that summary and presents it.
         - Show reports based on the last month, week, day, etc.
         - Create a combined score which takes into account
             - Memory efficiency
             - CPU efficiency
             - Carbon load
         - Add a metric showing how much of the computation was performed at night.
+        - Calculate cput efficiency based on used_cput / (used_walltime * nproc)
 
 """
 
-import plotext as plt
+#import plotext as plt
 import pandas as pd
+import sqlite3
 import argparse
-import ScienceFarts 
 import sys 
 import os
 import pdb
 
+# Try to import ScienceFarts
+try:
+    import ScienceFarts
+except ImportError:
+    print("ScienceFarts is not installed. Please install it to compute carbon load.")
+
 
 ## ------------------- Functions ------------------- ##
+
+def query_torque_database(db_path, user, period):
+    """
+    Extract the requested data from the torque_log database.
+    """
+
+    # Open connection to database
+    conn = sqlite3.connect(db_path,
+                           detect_types=sqlite3.PARSE_DECLTYPES |
+                           sqlite3.PARSE_COLNAMES)
+
+    # Extract data
+    # in case of a defined user
+    if user is not None:
+        data = pd.read_sql_query(f"""SELECT * from torque_logs 
+                                    WHERE logdate >= date('now', '-{period} day') 
+                                    AND user = '{user}'""", 
+                                    conn)
+    else:
+        data = pd.read_sql_query(f"""SELECT * from torque_logs 
+                                     WHERE logdate >= date('now', '-{period} day')""", 
+                                     conn)
+        
+    # See if extracted dataframe is empty
+    if data.empty:
+        print(f"-- No data in the past {period} days. Try again")
+        sys.exit(1)
+
+    # Close database connection
+    conn.close()
+    
+    return data
+
 
 def my_own_plotter(x, y, title, m):
     """
@@ -56,6 +101,7 @@ def my_own_plotter(x, y, title, m):
 
     # Print the header
     #print( "---------------------------------------------")
+    print("")
     print(f"\033[94m----- {title} {'-' * (width - len(title))}\033[00m")
     print( "")
     print( "User      | ",scale, header_spaces, "|", sep="")
@@ -65,19 +111,19 @@ def my_own_plotter(x, y, title, m):
     for name, value in zip(x,y):
         # Prepare some stuff
         value = round(value, 3)
-        hashes = int(value * 100) if m != "carbon" else int(value / (max(y) * 1.2) * 100)
+        hashes = min(94, int(value * 100) if m != "carbon" else int(value / (max(y) * 1.2) * 100))
         start_space = 10 - len(name)
-        remain_space = 100 - hashes - (3 + len(str(value)))
+        remain_space = 100 - hashes - (2 + len(str(value)))
 
         ## And print it
         # Add a green color to the user with the best score
         if counter == 0:
             name = "\033[92m{}\033[00m".format(name)
             hashes = "\033[92m{}\033[00m".format(hashes * '=')
-            print(f"{name}{start_space * ' '}| {hashes}  {value}{remain_space * ' '}|")
+            print(f"{name}{start_space * ' '}| {hashes} {value}{remain_space * ' '}|")
         # Boring old white for the rest
         else:
-            print(f"{name}{start_space * ' '}| {hashes * '='}  {value}{remain_space * ' '}|")
+            print(f"{name}{start_space * ' '}| {hashes * '='} {value}{remain_space * ' '}|")
         counter += 1
 
 
@@ -86,48 +132,44 @@ def compute_stats(data, metric, user=None):
     This function formats the input data to match the desired output format.
     It then calculates the desired metric and returns the results.
     """
-    
-    # If metric is 'memory'
-    if metric == 'memory':
-        # Set columns containing memory data
-        req_col = "mem_req_mb"
-        used_col = "mem_mb"
-        title = "Memory efficiency"
 
-    elif metric == "cpus":
-        # Set columns containing cpu data
-        req_col = "cput_req_sec"
-        used_col = "cput_sec"
-        title = "CPU time efficiency"
-    
-    elif metric == "carbon":
-        title = "Carbon load"
-
-    
     ## Compute statistics
-    if metric != "carbon":
+    if metric == "memory":
         # Calculate efficiency of metrics memory and cpu
-        data = data[["User", req_col, used_col]].copy()
-        data.loc[:,"eff"] = data[used_col] / data[req_col]
-        data.loc[:,"frac"] = data[req_col] / data.groupby("User")[req_col].transform(sum)
+        data = data[["user", "mem_req_mb", "mem_mb"]].copy()
+        data.loc[:,"eff"] = data["mem_mb"] / data["mem_req_mb"]
+        data.loc[:,"frac"] = data["mem_req_mb"] / data.groupby("user")["mem_req_mb"].transform(sum)
         data.loc[:,"result"] = data["eff"] * data["frac"]
-        stats = data.groupby("User").sum().sort_values(by = "result", ascending = False)
+        stats = data.groupby("user").sum().sort_values(by = "result", ascending = False)
         
         x,y = stats.index.values, stats["result"]
+        title = "Memory efficiency \U0001F40F"
+    
+    elif metric == "cpus":
+        # Calculate efficiency of metrics memory and cpu
+        data = data[["user", "walltime_sec", "cput_sec", "nproc"]].copy()
+        data.loc[:,"requested"] = data["walltime_sec"] * data["nproc"]
+        data.loc[:,"eff"] = data["cput_sec"] / data["requested"]
+        data.loc[:,"frac"] = data["requested"] / data.groupby("user")["requested"].transform(sum)
+        data.loc[:,"result"] = data["eff"] * data["frac"]
+        stats = data.groupby("user").sum().sort_values(by = "result", ascending = False)
+        
+        x,y = stats.index.values, stats["result"]
+        title = "CPU time efficiency \U0001F551"
     
     else:
         # Compute carbon load
         #pdb.set_trace()
-        carbon_load, nr_washes = compute_carbon_load(data)
+        carbon_load, energy, nr_washes = compute_carbon_load(data)
         stats = carbon_load.T.rename(columns = {"carbon_load": "result"})
         stats = stats.sort_values(by = "result", ascending = True)
         y = stats.result.values
         x = stats.index.values
+        title = "Carbon load \U0001F4A8"
         
 
     # Return results
     # In case a user is specified, return the metric and the position of the user
-    
     if user:
         pos = stats.index.get_loc(user) + 1
         score = stats.loc[user,"result"]
@@ -156,7 +198,8 @@ def compute_carbon_load(data):
 
     # First extract data and reformat it for ScienceFarts
     # We use the mean of the last 100 jobs for that user
-    user_data = data.groupby("User").tail(100).groupby("User").mean().round(0).astype(int)
+    #user_data = data.groupby("user").tail(100).groupby("user").mean().round(0).astype(int)
+    user_data = data.groupby("user").mean(numeric_only = True).round(0).astype(int)
     
     users = user_data.index.values
     cpus = user_data["nproc"]
@@ -166,11 +209,11 @@ def compute_carbon_load(data):
     # Compute carbon load
     carbon_load = {}
     for walltime, mem_gb, cpus, user in zip(walltime, mem_gb, cpus, users):
-        carbon, nr_washes = ScienceFarts.ScienceFarts([walltime, mem_gb, cpus], "forecast_return").run()
+        carbon, energy, nr_washes = ScienceFarts.ScienceFarts([walltime, mem_gb, cpus], "forecast_return").run()
         carbon_load[user] = {"carbon_load": int(carbon), "nr_washes": round(nr_washes, 0)}
     carbon_load = pd.DataFrame.from_dict(carbon_load)
 
-    return(carbon_load, nr_washes)
+    return(carbon_load, energy, nr_washes)
 
 
 def plot_statistics(x, y, title, m):
@@ -202,40 +245,44 @@ def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.RawDescriptionHelpFormatter,
                                      description = arg_desc)
 
-    parser.add_argument(dest = "Torque_file", nargs=1, 
-                        help = "A .csv file containing compute metrics")
+    parser.add_argument(dest = "Database_path", nargs=1, default="./torque_logs.db", 
+                        help = "A path to the torque_log database")
     parser.add_argument("-u","--user", dest="user", nargs=1, default=None,
-                        help = "Produce a report for the specified user.")
+                        help = "Produce a report for the specified user."),
+    parser.add_argument("-p","--period", dest="period", default=30, type=int,
+                        help = "The number of days into the past you want to summarize data for."),
     parser.add_argument("-c","--no_carbon", dest="carbon", action="store_false", 
                         default=True, help="Do not compute carbon load.")
 
     args = parser.parse_args()
     
     # Modify input
-    torque_file = args.Torque_file[0]
-    carbon = args.carbon
-    user = args.user[0] if args.user else None
+    database_path = args.Database_path[0]
+    carbon      = args.carbon
+    user        = args.user[0] if args.user else None
+    period      = args.period if args.period < 730 else 30
 
     # Check if input file exists
-    if not os.path.isfile(torque_file):
-        print("ERROR: The input file does not exist.")
+    if not os.path.isfile(database_path):
+        print("ERROR: The input database path does not exist.")
         sys.exit()
 
     # Return input
-    return(torque_file, user, carbon)
+    return(database_path, user, period, carbon)
 
 
 ## ------------------- Main ------------------- ##
 
 def main():
     # Get the input file
-    input_file, user, carbon = parse_args()
+    db_path, user, period, carbon = parse_args()
 
-    # Read the input file
-    data = pd.read_csv(input_file, sep = ',')
+    # Retrieve data from torque_log database
+    data = query_torque_database(db_path, user, period)
+    #data = pd.read_csv(input_file, sep = ',', index_col=False)
 
     # Check if user exists
-    if user not in data.User.values and user is not None:
+    if user not in data.user.values and user is not None:
         print(f"ERROR: The user '{user}' does not exist in the log file.")
         sys.exit()
 

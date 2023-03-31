@@ -1,193 +1,342 @@
 """
     Author: Alexander Henriksen
     Data: February 2023
-    Description: This script was made to scrape a toque accounting file
+    Description: This script was made to scrape a set of toque accounting files
                  to extract all information on use of CPUs, memory and time.
-                 It then outputs this information into a .csv file, which can 
+                 It then outputs this information into a sqlite database, which can 
                  be used by the torqueDork.py script to calculate statistics.
     
     Input:
-        1) A torque accounting file
+        1) A torque accounting file (-p)
+        2) A target sqlite database in which to put the output (-l)
+        Flags:
+          -p: Path to the torque accounting files
+          -l: Path to the output sqlite database
+          -w: Time window - Number of days into the past that the script should scrape data
+          -s: Server logs - Are the input files server_logs instead of accounting_logs?
     Output:
-        1) A .csv file containing job information
-
+        1) A torque_logs.db sqlite database containing job information
+           
     USAGE:
         python scrapeTorque.py <torque_logfile> 
 
     IDEAS:
-        - Change output of scrapeTorque.py so that the output is 
-          summary statistics and so that TorqueDork.py simply
-          reads that summary and presents it.
+        - Create a second table that includes summary statistics for each user.
+          This could be ordered by Year, Month, Week and so on.
+          This would mean that calling torqueDork doesn't require a calculation
+          of summary stats, but simply a retrieval of them
 """
 
 import pandas as pd
 import datetime
 import argparse
+import sqlite3
 import sys 
 import os
 import re
 import pdb
 
-## ------------------- Functions ------------------- ##
+## ------------------- Definitions ------------------- ##
 
-def walltime_to_seconds(walltime):
-    """
-    This function takes a walltime in the format of the torque accounting file
-    (DD:HH:MM:SS) and converts it to seconds.
-    """
+class ScrapeTorque(object):
 
-    # Split the walltime into days, hours, minutes and seconds
-    walltime = walltime.split(":")
-    if len(walltime) == 3:
-        days = 0
-        hours = int(walltime[0])
-        minutes = int(walltime[1])
-        seconds = int(walltime[2])
-    elif len(walltime) == 4:
-        days = int(walltime[0])
-        hours = int(walltime[1])
-        minutes = int(walltime[2])
-        seconds = int(walltime[3])
+    def __init__(self, torque_path, log_path, past_window, server_logs):
+        self.torque_path = torque_path
+        self.log_path = log_path
+        self.past_window = past_window
+        self.server_logs = server_logs
 
-    # Convert to seconds
-    seconds = days * 86400 + hours * 3600 + minutes * 60 + seconds
+    ## ---------------------- Run --------------------- ##
 
-    return str(seconds)
+    def run(self):
+
+        # Open database
+        conn, cursor, last_date = self.check_database()
+
+        # Hard-coded variables
+        today = datetime.datetime.today().date() #strftime("%Y%m%d") # Today's date
+        #start_date = (datetime.datetime.today() - datetime.timedelta(days=self.past_window)).strftime("%Y%m%d") # Start date
+        #output_file = "/users/people/alexpil/torque_data.csv" # Output file
 
 
-def memory_to_mb(memory):
-    """
-    This function takes a memory request in the format of the torque accounting file
-    (e.g. 10gb) and converts it to MB.
-    """
+        # Get list of dates in the format of the torque accounting file
+        torque_file_list = self.build_date_list(last_date, today)
 
-    # In case no memory was requested, assume a full node
-    if memory == "1":
-        return str(180 * 1024)
+        # create the output file
+        #with open(self.log_path, "w") as outfile:
+        #    outfile.write(",".join(["date", "User",
+        #                            "exit_status", "ngpus", "nproc",
+        #                            "walltime_req_sec", "walltime_sec",
+        #                            "mem_req_mb", "mem_mb",
+        #                            "cput_req_sec", "cput_sec"]) + "\n")
 
-    # Extract the memory amount and the unit
-    memory_amount = int(memory[:-2])
-    memory_unit = memory[-2:]
+        # Go through the list of dates and extract the information
+        print(f"-- Updating database with logs since {last_date} --")
+        for torque_file in torque_file_list:
 
-    # Convert to MB
-    if memory_unit == "gb":
-        memory = memory_amount * 1024
-    elif memory_unit == "mb":
-        memory = memory_amount
-    elif memory_unit == "kb":
-        memory = memory_amount / 1024
-
-    return str(memory)
-
-def get_line_match(pattern, string):
-    """
-    This function takes a string and a pattern and returns
-    a regex match. If no match is found, it returns 0.
-    """
-
-    match = re.search(pattern, string)
-    if match:
-        return match.group(1)
-    else:
-        return "1"
+            # Extract information and add to database
+            self.extract_torque_data(torque_file, conn, cursor)
 
 
-def build_date_list(start_date, end_date):
-    """
-    This function takes two dates in the format of the torque accounting file
-    and returns a list of dates in the same format.
-    """
-    # Convert the dates to datetime objects
-    start_date = datetime.datetime.strptime(start_date, "%Y%m%d")
-    end_date = datetime.datetime.strptime(end_date, "%Y%m%d")
+        # Commit and close connection
+        conn.commit()
+        conn.close()
 
-    # Create a list of dates between the two dates
-    date_list = []
-    for date in pd.date_range(start_date, end_date):
-        date_list.append(date.strftime("%Y%m%d"))
-
-    return date_list
+        # Print a message to the user
+        print("-- Done!")
 
 
-def extract_torque_data(date, output_file, torque_path, server_logs):
-    """
-    This function goes through a torque accounting file and extracts
-    relevant information on resource use.
-    """
 
-    torque_file = os.path.join(torque_path, date)
+    ## ------------------- Functions ------------------- ##
 
-    # Check if the file exists
-    if not os.path.isfile(torque_file):
-        print("File {} does not exist.".format(torque_file))
-        return
+    def check_database(self):
+        """
+        Check if the database exists and create if it doesn't
+        """
 
-    # Open the torque accounting file
-    with open(torque_file, "r") as infile, open(output_file, "a") as outfile:
+        database = self.log_path
+        #if not os.path.exists(database):
+        #    print("Error: database does not exist.")
+        #    exit(1)
 
-        # Go through the file line by line
-        for line in infile:
+        # Connect to the database
+        conn = sqlite3.connect(database,
+                               detect_types=sqlite3.PARSE_DECLTYPES |
+                               sqlite3.PARSE_COLNAMES)
+        cursor = conn.cursor()
 
-            # Find lines with information on ended jobs
-            if re.search("Exit_status=\d+", line):
+        # Check for the existence of a table and create the raw table if it doesn't exist
+        cursor.execute("""CREATE TABLE IF NOT EXISTS torque_logs (
+                            logdate date,
+                            user text,
+                            exit_status integer,
+                            ngpus integer,
+                            nproc integer,
+                            walltime_req_sec integer,
+                            walltime_sec integer,
+                            mem_req_mb integer,
+                            mem_mb integer,
+                            cput_req_sec integer,
+                            cput_sec integer
+                            )""")
 
-                # extract line
-                #line = line.strip("\n").split(" ")
+        # Get latest date from database
+        last_date = self.get_last_database_date(conn, cursor)
 
-                # Initialize dictionary
-                data = {}
-
-                # Define patterns to extract information
-                if server_logs:
-                    patterns = {"date":          "(^[0-9/]{10})",
-                                "exit_status":   "Exit_status=(\d+)",
-                                "used_walltime": "resources_used\.walltime=([0-9:]+)",
-                                "used_mem":      "resources_used\.mem=(\d+\w+)",
-                                "used_cput":     "resources_used\.cput=(\d+)"}
-
-                else:
-                    patterns = {"date":          "(^[0-9/]{10})",
-                                "user":          "user=(\w+)",
-                                "exit_status":   "Exit_status=(\d+)",
-                                "req_walltime":  "Resource_List\.walltime=([0-9:]+)",
-                                "req_mem":       "Resource_List\.mem=(\d+\w+)",
-                                "req_nodes":     "Resource_List\.nodes=(\d+)",
-                                "req_cpus":      "Resource_List.+ppn=(\d+)",
-                                "req_gpus":      "Resource_List.+gpu=(\d+)",
-                                "used_walltime": "resources_used\.walltime=([0-9:]+)",
-                                "used_mem":      "resources_used\.mem=(\d+\w+)",
-                                "used_cput":     "resources_used\.cput=(\d+)"}
-
-                # Extract information
-                for name in patterns.keys():
-                    data[name] = get_line_match(patterns[name], line)
             
-                if server_logs:
-                    data["user"] = "server"
-                    data["req_walltime"] = data["used_walltime"]
-                    data["req_mem"] = data["used_mem"]
-                    data["req_nodes"] = "1"
-                    data["req_gpus"] = "0"
+        return conn, cursor, last_date
 
-                # Format extracted data for output
-                req_walltime = walltime_to_seconds(data["req_walltime"])
-                used_walltime = walltime_to_seconds(data["used_walltime"])
-                req_mem = memory_to_mb(data["req_mem"])
-                used_mem = memory_to_mb(data["used_mem"])
 
-                if server_logs:
-                    data["req_cpus"] = str(round(int(data["used_cput"]) / int(used_walltime)+1))
+    def get_last_database_date(self, conn, cursor):
+        """
+        Fetch the date of the last data entry in the database
+        """
 
-                # Calculate required cputime
-                req_cputime = str(int(req_walltime) * int(data["req_cpus"]) * int(data["req_nodes"]))
+        # Fetch the date of the latest data entry
+        cursor.execute("SELECT logdate FROM torque_logs")
+        dates = cursor.fetchall()
 
-                # Write information to file
-                outfile.write(",".join([data["date"], data["user"], data["exit_status"],
-                                        data["req_gpus"], data["req_cpus"],
-                                        req_walltime, used_walltime,
-                                        req_mem, used_mem,
-                                        req_cputime, data["used_cput"]]) + "\n")
+        # In case of no info in database, start at 01.01.2023
+        if len(dates) == 0:
+            last_date = datetime.datetime.strptime("20230101", "%Y%m%d")
+        else:
+            last_date = sorted(dates, 
+                                #key = lambda d: datetime.datetime.strftime(d, "%Y%m%d"),
+                                reverse=True)[0]
+        
+        print(f"-- Latest date in the database is {last_date} --")
 
+        return last_date
+
+
+    def walltime_to_seconds(self, walltime):
+        """
+        This function takes a walltime in the format of the torque accounting file
+        (DD:HH:MM:SS) and converts it to seconds.
+        """
+
+        # Split the walltime into days, hours, minutes and seconds
+        walltime = walltime.split(":")
+        if len(walltime) == 3:
+            days = 0
+            hours = int(walltime[0])
+            minutes = int(walltime[1])
+            seconds = int(walltime[2])
+        elif len(walltime) == 4:
+            days = int(walltime[0])
+            hours = int(walltime[1])
+            minutes = int(walltime[2])
+            seconds = int(walltime[3])
+
+        # Convert to seconds
+        seconds = days * 86400 + hours * 3600 + minutes * 60 + seconds
+
+        return str(seconds)
+
+
+    def memory_to_mb(self, memory):
+        """
+        This function takes a memory request in the format of the torque accounting file
+        (e.g. 10gb) and converts it to MB.
+        """
+
+        # In case no memory was requested, assume a full node (180gb)
+        if memory == "1":
+            return str(180 * 1024)
+
+        # Extract the memory amount and the unit
+        memory_amount = int(memory[:-2])
+        memory_unit = memory[-2:]
+
+        # Convert to MB
+        if memory_unit == "gb":
+            memory = memory_amount * 1024
+        elif memory_unit == "mb":
+            memory = memory_amount
+        elif memory_unit == "kb":
+            memory = memory_amount / 1024
+
+        return str(round(memory))
+
+    def get_line_match(self, name, pattern, string):
+        """
+        This function takes a string and a pattern and returns
+        a regex match. If no match is found, it returns 0.
+        """
+
+        match = re.search(pattern, string)
+        if match:
+            return match.group(1)
+        elif not match and name == "user":
+            return "server"
+        elif not match and name == "req_gpus":
+            return "0"
+        else:
+            return "1"
+
+
+    def build_date_list(self, start_date, end_date):
+        """
+        This function takes two dates in the format of the torque accounting file
+        and returns a list of dates in the same format.
+        """
+        # Convert the dates to datetime objects
+        start_date = datetime.datetime.strftime(start_date, "%Y%m%d")
+        end_date = datetime.datetime.strftime(end_date, "%Y%m%d")
+
+        # Create a list of dates between the two dates
+        date_list = []
+        for date in pd.date_range(start_date, end_date):
+            date_list.append(date.strftime("%Y%m%d"))
+
+        return date_list
+
+
+    def extract_torque_data(self, date, conn, cursor):
+        """
+        This function goes through a torque accounting file and extracts
+        relevant information on resource use.
+        """
+
+        torque_file = os.path.join(self.torque_path, date)
+
+        # Check if the file exists
+        if not os.path.isfile(torque_file):
+            print("File {} does not exist.".format(torque_file))
+            return
+
+        # Open the torque accounting file
+        with open(torque_file, "r") as infile:
+        #open(output_file, "a") as outfile:
+
+            # Go through the file line by line
+            for line in infile:
+
+                # Find lines with information on ended jobs
+                if re.search("Exit_status=\d+", line):
+
+                    # extract line
+                    #line = line.strip("\n").split(" ")
+
+                    # Initialize dictionary
+                    data = {}
+
+                    # Define patterns to extract information
+                    if server_logs:
+                        patterns = {"date":          "(^[0-9/]{10})",
+                                    "user":          "user=(\w+)",
+                                    "exit_status":   "Exit_status=(\d+)",
+                                    "req_cpus":      "Resource_List.+ppn=(\d+)",
+                                    "req_gpus":      "Resource_List.+gpu=(\d+)",
+                                    "used_walltime": "resources_used\.walltime=([0-9:]+)",
+                                    "used_mem":      "resources_used\.mem=(\d+\w+)",
+                                    "used_cput":     "resources_used\.cput=(\d+)"}
+
+                    else:
+                        patterns = {"date":          "(^[0-9/]{10})",
+                                    "user":          "user=(\w+)",
+                                    "exit_status":   "Exit_status=(\d+)",
+                                    "req_walltime":  "Resource_List\.walltime=([0-9:]+)",
+                                    "req_mem":       "Resource_List\.mem=(\d+\w+)",
+                                    "req_nodes":     "Resource_List\.nodes=(\d+)",
+                                    "req_cpus":      "Resource_List.+ppn=(\d+)",
+                                    "req_gpus":      "Resource_List.+gpu=(\d+)",
+                                    "used_walltime": "resources_used\.walltime=([0-9:]+)",
+                                    "used_mem":      "resources_used\.mem=(\d+\w+)",
+                                    "used_cput":     "resources_used\.cput=(\d+)"}
+
+                    # Extract information
+                    for name in patterns.keys():
+                        data[name] = self.get_line_match(name, patterns[name], line)
+                
+                    # In case of server logs as input some values will need to be changed
+                    # as these are not present in the log files.
+                    if server_logs:
+                        data["req_walltime"] = data["used_walltime"]
+                        data["req_mem"] = data["used_mem"]
+
+                    # Format extracted data for output
+                    logdate = datetime.datetime.strptime(data["date"], "%Y-%m-%d").date()
+                    req_walltime = self.walltime_to_seconds(data["req_walltime"])
+                    used_walltime = self.walltime_to_seconds(data["used_walltime"])
+                    req_mem = self.memory_to_mb(data["req_mem"])
+                    used_mem = self.memory_to_mb(data["used_mem"])
+
+                    if server_logs:
+                        data["req_cpus"] = str(round(int(data["used_cput"]) / int(used_walltime)+1))
+
+                    # Calculate required cputime
+                    req_cputime = str(int(req_walltime) * int(data["req_cpus"]) * int(data["req_nodes"]))
+
+                    # Add info to database
+                    cursor.execute("""INSERT INTO torque_logs 
+                                      VALUES 
+                                       (:logdate, :user, :exit_status, :ngpus, :nproc,
+                                       :walltime_req_sec, :walltime_sec, :mem_req_mb,
+                                       :mem_mb, :cputime_req_sec, :cputime_sec)""", 
+                                       {"logdate": logdate, "user": data["user"],
+                                        "exit_status": data["exit_status"], "ngpus": data["req_gpus"],
+                                        "nproc":data["req_cpus"], "walltime_req_sec": req_walltime,
+                                        "walltime_sec": used_walltime, "mem_req_mb": req_mem,
+                                        "mem_mb": used_mem, "cputime_req_sec":  req_cputime,
+                                        "cputime_sec":data["used_cput"]})
+
+        # Print message after data extract            
+        print(f" > Updated database with info from {date}")
+
+                    # Write information to file
+                    #outfile.write(",".join([data["date"], data["user"], data["exit_status"],
+                    #                        data["req_gpus"], data["req_cpus"],
+                    #                        req_walltime, used_walltime,
+                    #                        req_mem, used_mem,
+                    #                        req_cputime, data["used_cput"]]) + "\n")
+
+                    # Write to sql database
+
+
+
+
+ ## ---------------------- Parse args and run --------------------- ##
 
 def parse_args():
     """
@@ -203,11 +352,13 @@ def parse_args():
         '''
 
     parser = argparse.ArgumentParser(formatter_class = argparse.RawDescriptionHelpFormatter,
-                                     description = arg_desc)
+                                    description = arg_desc)
 
-    parser.add_argument("-p","--pat", dest = "torque_path", default="/var/spool/torque/server_priv/accounting", 
+    parser.add_argument("-p","--path", dest = "torque_path", default="/var/spool/torque/server_priv/accounting", 
                         help = "Path to torque accounting logs")
-    parser.add_argument("-w","--window", dest="past_window", default=30, type=int,
+    parser.add_argument("-l","--log", dest="log_path", default="/var/spool/torque/server_priv/accounting",
+                        help = "Path to output/input log file")
+    parser.add_argument("-w","--window", dest="past_window", default=7, type=int,
                         help = "Number of days to look back in time")
     parser.add_argument("-s","--server_logs", dest="server_logs", default=False, action="store_true",
                         help = "Are the input files server logs instead of accounting logs?")                    
@@ -215,48 +366,15 @@ def parse_args():
     args = parser.parse_args()
 
     # Return input
-    return args.torque_path, args.past_window, args.server_logs
+    return args.torque_path, args.log_path, args.past_window, args.server_logs
 
 
-
-## ---------------------- Main --------------------- ##
-
-def main():
-
-    # Parse arguments
-    torque_path, past_window, server_logs = parse_args()
-
-    # Hard-coded variables
-    today = datetime.datetime.today().strftime("%Y%m%d") # Today's date
-    start_date = (datetime.datetime.today() - datetime.timedelta(days=past_window)).strftime("%Y%m%d") # Start date
-    output_file = "/users/people/alexpil/torque_data.csv" # Output file
-
-
-    # Get list of dates in the format of the torque accounting file
-    date_list = build_date_list(start_date, today)
-
-    # create the output file
-    with open(output_file, "w") as outfile:
-        outfile.write(",".join(["date", "User",
-                                "exit_status", "ngpus", "nproc",
-                                "walltime_req_sec", "walltime_sec",
-                                "mem_req_mb", "mem_mb",
-                                "cput_req_sec", "cput_sec"]) + "\n")
-
-    # Go through the list of dates and extract the information
-    for date in date_list:
-
-        # Extract information
-        extract_torque_data(date, output_file, torque_path, server_logs)
-
-    # Print a message to the user
-    print("Done!")
-
-
-
-
-
-# Run the main function
-if __name__ == "__main__":
-
-    main()
+## BEGIN
+if __name__=="__main__":
+    
+    # Parse input
+    torque_path, log_path, past_window, server_logs = parse_args()
+    
+    # Run program
+    cd = ScrapeTorque(torque_path, log_path, past_window, server_logs)
+    cd.run()
