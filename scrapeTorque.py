@@ -31,6 +31,7 @@ import pandas as pd
 import datetime
 import argparse
 import sqlite3
+import math
 import sys 
 import os
 import re
@@ -62,14 +63,6 @@ class ScrapeTorque(object):
         # Get list of dates in the format of the torque accounting file
         torque_file_list = self.build_date_list(last_date, today)
 
-        # create the output file
-        #with open(self.log_path, "w") as outfile:
-        #    outfile.write(",".join(["date", "User",
-        #                            "exit_status", "ngpus", "nproc",
-        #                            "walltime_req_sec", "walltime_sec",
-        #                            "mem_req_mb", "mem_mb",
-        #                            "cput_req_sec", "cput_sec"]) + "\n")
-
         # Go through the list of dates and extract the information
         print(f"-- Updating database with logs since {last_date} --")
         for torque_file in torque_file_list:
@@ -95,9 +88,9 @@ class ScrapeTorque(object):
         """
 
         database = self.log_path
-        #if not os.path.exists(database):
-        #    print("Error: database does not exist.")
-        #    exit(1)
+        if not os.path.exists(database):
+            print(f"Error: {database} does not exist.")
+            exit(1)
 
         # Connect to the database
         conn = sqlite3.connect(database,
@@ -134,11 +127,11 @@ class ScrapeTorque(object):
 
         # Fetch the date of the latest data entry
         cursor.execute("SELECT logdate FROM torque_logs")
-        dates = cursor.fetchall()
+        dates = [datelist[0] for datelist in cursor.fetchall()]
 
         # In case of no info in database, start at 01.01.2023
         if len(dates) == 0:
-            last_date = datetime.datetime.strptime("20230101", "%Y%m%d")
+            last_date = datetime.datetime.strptime("20200101", "%Y%m%d")
         else:
             last_date = sorted(dates, 
                                 #key = lambda d: datetime.datetime.strftime(d, "%Y%m%d"),
@@ -185,9 +178,10 @@ class ScrapeTorque(object):
             return str(180 * 1024)
 
         # Extract the memory amount and the unit
-        memory_amount = int(memory[:-2])
-        memory_unit = memory[-2:]
-
+        mem_match = re.match(r"([0-9]+)([a-z]+)", memory)
+        memory_amount = int(mem_match.group(1))
+        memory_unit   =     mem_match.group(2)
+        
         # Convert to MB
         if memory_unit == "gb":
             memory = memory_amount * 1024
@@ -195,6 +189,9 @@ class ScrapeTorque(object):
             memory = memory_amount
         elif memory_unit == "kb":
             memory = memory_amount / 1024
+        elif memory_unit == "b":
+            memory = memory_amount / 1024 / 1024
+            memory = math.ceil(round(memory))
 
         return str(round(memory))
 
@@ -226,7 +223,7 @@ class ScrapeTorque(object):
 
         # Create a list of dates between the two dates
         date_list = []
-        for date in pd.date_range(start_date, end_date):
+        for date in pd.date_range(start_date, end_date, inclusive="right"):
             date_list.append(date.strftime("%Y%m%d"))
 
         return date_list
@@ -253,7 +250,7 @@ class ScrapeTorque(object):
             for line in infile:
 
                 # Find lines with information on ended jobs
-                if re.search("Exit_status=\d+", line):
+                if re.search("Exit_status=-*\d+", line):
 
                     # extract line
                     #line = line.strip("\n").split(" ")
@@ -262,7 +259,7 @@ class ScrapeTorque(object):
                     data = {}
 
                     # Define patterns to extract information
-                    if server_logs:
+                    if self.server_logs:
                         patterns = {"date":          "(^[0-9/]{10})",
                                     "user":          "user=(\w+)",
                                     "exit_status":   "Exit_status=(\d+)",
@@ -280,7 +277,7 @@ class ScrapeTorque(object):
                                     "req_mem":       "Resource_List\.mem=(\d+\w+)",
                                     "req_nodes":     "Resource_List\.nodes=(\d+)",
                                     "req_cpus":      "Resource_List.+ppn=(\d+)",
-                                    "req_gpus":      "Resource_List.+gpu=(\d+)",
+                                    "req_gpus":      "Resource_List.+gpus=(\d+)",
                                     "used_walltime": "resources_used\.walltime=([0-9:]+)",
                                     "used_mem":      "resources_used\.mem=(\d+\w+)",
                                     "used_cput":     "resources_used\.cput=(\d+)"}
@@ -291,22 +288,25 @@ class ScrapeTorque(object):
                 
                     # In case of server logs as input some values will need to be changed
                     # as these are not present in the log files.
-                    if server_logs:
+                    if self.server_logs:
                         data["req_walltime"] = data["used_walltime"]
                         data["req_mem"] = data["used_mem"]
 
                     # Format extracted data for output
-                    logdate = datetime.datetime.strptime(data["date"], "%Y-%m-%d").date()
+                    logdate = datetime.datetime.strptime(data["date"], "%m/%d/%Y").date()
                     req_walltime = self.walltime_to_seconds(data["req_walltime"])
                     used_walltime = self.walltime_to_seconds(data["used_walltime"])
                     req_mem = self.memory_to_mb(data["req_mem"])
                     used_mem = self.memory_to_mb(data["used_mem"])
 
-                    if server_logs:
+                    if self.server_logs:
                         data["req_cpus"] = str(round(int(data["used_cput"]) / int(used_walltime)+1))
 
                     # Calculate required cputime
-                    req_cputime = str(int(req_walltime) * int(data["req_cpus"]) * int(data["req_nodes"]))
+                    if self.server_logs:
+                        req_cputime = str(int(req_walltime) * int(data["req_cpus"]))
+                    else:
+                        req_cputime = str(int(req_walltime) * int(data["req_cpus"]) * int(data["req_nodes"]))
 
                     # Add info to database
                     cursor.execute("""INSERT INTO torque_logs 
@@ -324,16 +324,6 @@ class ScrapeTorque(object):
         # Print message after data extract            
         print(f" > Updated database with info from {date}")
 
-                    # Write information to file
-                    #outfile.write(",".join([data["date"], data["user"], data["exit_status"],
-                    #                        data["req_gpus"], data["req_cpus"],
-                    #                        req_walltime, used_walltime,
-                    #                        req_mem, used_mem,
-                    #                        req_cputime, data["used_cput"]]) + "\n")
-
-                    # Write to sql database
-
-
 
 
  ## ---------------------- Parse args and run --------------------- ##
@@ -348,7 +338,7 @@ def parse_args():
         ----------------------------------------------
             This program scrapes through torque 
             accounting logs and writes relevant information
-            to a output .csv file.
+            to a sqlite3 database
         '''
 
     parser = argparse.ArgumentParser(formatter_class = argparse.RawDescriptionHelpFormatter,
