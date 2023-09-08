@@ -160,6 +160,8 @@ class torqueDork(object):
         ## Compute statistics
         mem_eff = self.calculate_mem_efficiency(self.query_data[["user", "mem_req_mb", "mem_mb"]])
         cpu_eff = self.calculate_cpu_efficiency(self.query_data[["user", "walltime_sec", "cput_sec", "nproc"]])
+        mem_waste = self.calculate_mem_waste(self.query_data[["user", "mem_req_mb", "mem_mb", "walltime_sec"]])
+        #pdb.set_trace()
 
         if self.carbon:
             # Compute carbon load
@@ -169,9 +171,9 @@ class torqueDork(object):
 
         ## Concat results to a single data frame
         if self.carbon:
-            data_stats = pd.concat([mem_eff, cpu_eff, co2_eff], axis = 1)
+            data_stats = pd.concat([mem_eff, cpu_eff, mem_waste, co2_eff], axis = 1)
         else:
-            data_stats = pd.concat([mem_eff, cpu_eff], axis = 1)
+            data_stats = pd.concat([mem_eff, cpu_eff, mem_waste], axis = 1)
 
         # Rename index
         data_stats.index.names = ["User"]
@@ -179,10 +181,9 @@ class torqueDork(object):
         return data_stats
 
 
-
     def calculate_mem_efficiency(self, data):
         """
-        Calculate memory efficiency. Return results as a pandas dataframe.
+        Calculate relative memory efficiency. Return results as a pandas dataframe.
         """
 
         # Calculate efficiency
@@ -192,7 +193,7 @@ class torqueDork(object):
         data.loc[:,"mem_eff"] = data["eff"] * data["frac"]
 
         # Sort and clip at 1
-        stats = data.loc[:, ["user", "mem_eff"]].groupby("user").sum()
+        stats = data.loc[:, ["user", "mem_eff"]].groupby("user").sum(numeric_only=True)
         stats.loc[:,"mem_eff"] = stats["mem_eff"].clip(upper=1)
 
         return stats
@@ -214,6 +215,25 @@ class torqueDork(object):
         # Sort and clip at 1
         stats = data.loc[:, ["user","cpu_eff"]].groupby("user").sum()
         stats.loc[:,"cpu_eff"] = stats["cpu_eff"].clip(upper=1)
+
+        return stats
+
+
+
+    def calculate_mem_waste(self, data):
+        """
+        Calculate absolute memory waste. Return results as a pandas dataframe.
+        """
+        
+        # Calculate efficiency
+        data = data[["user", "mem_req_mb", "mem_mb", "walltime_sec"]].copy()
+        data.loc[:,"waste"] = (data["mem_req_mb"] - data["mem_mb"]) / 1000 / (data["walltime_sec"] / 3600)
+
+        # Sort and clip at 1
+        stats = data.loc[:, ["user", "waste"]].groupby("user").sum(numeric_only=True)
+        stats = stats.rename(columns={"waste": "mem_waste"})
+        # turn into integer
+        stats.loc[:,"mem_waste"] = stats["mem_waste"].apply(lambda x: int(x))
 
         return stats
 
@@ -242,6 +262,7 @@ class torqueDork(object):
         cput_mean = data.groupby('user')['cput_sec'].mean()
 
         user_data = pd.concat([record_sums, cput_mean], axis=1)
+        user_data.loc[user_data['cput_sec'] == 0, 'cput_sec'] = 1
 
         # Define variables
         users    =  user_data.index.values
@@ -345,9 +366,12 @@ def print_results(df, query_user, top_n = 5):
         elif metric == 'cpu_eff':
             title  = "CPU efficiency \U0001F551"
             df_metric = df.copy().sort_values(metric, ascending=False)
+        elif metric == 'mem_waste':
+            title  = "Memory waste \U0001F5D1"
+            df_metric = df.copy().sort_values(metric, ascending=False)
         elif metric == 'carbon_load':
             title  = "Carbon load \U0001F4A8"
-            df_metric = df.copy().sort_values(metric, ascending=True)
+            df_metric = df.copy().sort_values(metric, ascending=False)
 
         # Move index to 'User' column and change index to rank
         df_metric.reset_index(inplace=True)
@@ -364,22 +388,27 @@ def print_results(df, query_user, top_n = 5):
 
         # Calculate the maximum width for rank and username based on terminal width
         max_rank_width = len(str(df_metric.index.max() + 1)) + 4
-        max_username_width = 10
-        max_result_width = (df_metric[metric] * 100).apply(lambda x: f"{x:.2%}" if metric != 'carbon' else f"{x}").str.len().max()
-        max_bar_length = terminal_width - max_rank_width - max_username_width - max_result_width - 10
+        max_username_width = 14
+        #max_result_width = (df_metric[metric] * 100 if metric != 'carbon_load' else df_metric[metric]).apply(lambda x: f"{x:.2%}").str.len().max()
+        max_bar_length = terminal_width - max_rank_width - max_username_width - 25
 
         # Limit df to top entries and the entry matching self.name
         df_top = df_metric.head(top_n)
         if current_user not in df_top['User'].values:
-            print(current_user)
             df_top = pd.concat([df_top, df_metric[df_metric['User'] == current_user]])
 
         # Print the header
-        scale = "Efficiency (used / requested resources)" if metric != "carbon_load" else "Total carbon load (kgCO2e)"
+        if metric == 'mem_waste':
+            scale = "Absolute memory waste (Gigabyte Hours)"
+        elif metric == "carbon_load":
+            scale = "Total carbon load (kgCO2e)"
+        else:
+            scale = "Efficiency (used / requested resources)"
+
         print("")
         print(f"\033[94m----- {title} {'-' * (terminal_width - len(title))}\033[00m")
         print( "")
-        print(f" Rank  Username   | {scale}{' ' * (max_bar_length - len(scale) - 1)}")
+        print(f"  Rank  Username       | {scale}{' ' * (max_bar_length - len(scale) - 1)}")
 
         # Loop through each row in the DataFrame and print the top entries or the entry matching 'name'
         for index, row in df_top.iterrows():
@@ -388,7 +417,7 @@ def print_results(df, query_user, top_n = 5):
             result = row[metric]
 
             # Calculate the length of the bar based on the 'Result' value and maximum bar length
-            if metric == 'carbon_load':
+            if metric in ['carbon_load', 'mem_waste']:
                 max_result = df_metric[metric].max()
                 bar_length = int(result * max_bar_length / max_result)
             else:
@@ -400,7 +429,10 @@ def print_results(df, query_user, top_n = 5):
 
             # Determine the color for printing based on the rank, username, and 'name' parameter
             if rank == 1:
-                rank_color = '\033[32m'  # Green color for the top entry
+                if metric in ['carbon_load', 'mem_waste']:
+                    rank_color = '\033[95m'  # Magenta color for the most CO2 heavy entry
+                else:
+                    rank_color = '\033[32m'  # Green color for the most efficient entry
             elif username == current_user:
                 rank_color = '\033[94m'  # Purple color for the current user's entry
             elif name_index is not None and index in name_index:
@@ -410,10 +442,10 @@ def print_results(df, query_user, top_n = 5):
 
 
             # Print the rank, username, the horizontal bar with the 'Result' value ,
-            if metric == 'carbon_load':
-                print(f"{rank_color}{padded_rank}. {padded_username} |{'=' * bar_length}{' ' * (max_bar_length - bar_length)}| {result:,}")
+            if metric in ['carbon_load', 'mem_waste']:
+                print(f"{rank_color}{padded_rank}. {padded_username} |{'■' * bar_length}{' ' * (max_bar_length - bar_length)}| {result:,}")
             else:
-                print(f"{rank_color}{padded_rank}. {padded_username} |{'=' * bar_length}{' ' * (max_bar_length - bar_length)}| {result:.2%}")
+                print(f"{rank_color}{padded_rank}. {padded_username} |{'■' * bar_length}{' ' * (max_bar_length - bar_length)}| {result:.2%}")
 
         # Reset color to default after printing
         print('\033[0m')
@@ -483,4 +515,4 @@ if __name__=="__main__":
     if query_user:
         print_user_report(cd.data_stats, carbon)
     else:
-        print_results(cd.data_stats, USER, top_n)
+        print_results(cd.data_stats, query_user, top_n)
