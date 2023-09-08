@@ -140,7 +140,10 @@ class torqueDork(object):
 
         # See if extracted dataframe is empty
         if data.empty:
-            print(f"-- No data in the past {self.period} days. Try again")
+            if self.query_user:
+                print(f"-- No data for user {self.query_user} in the past {self.period} days. Try again")
+            else:
+                print("-- No data for the last {self.period} days. Try again")
             sys.exit(1)
 
         # Close database connection
@@ -232,8 +235,8 @@ class torqueDork(object):
         # Sort and clip at 1
         stats = data.loc[:, ["user", "waste"]].groupby("user").sum(numeric_only=True)
         stats = stats.rename(columns={"waste": "mem_waste"})
-        # turn into integer
-        stats.loc[:,"mem_waste"] = stats["mem_waste"].apply(lambda x: int(x))
+        # turn into integer and turn NAN to 0
+        stats["mem_waste"] = stats["mem_waste"].fillna(0).apply(lambda x: int(x))
 
         return stats
 
@@ -258,7 +261,7 @@ class torqueDork(object):
         """
 
         # First Caluclate the total resource use per user
-        record_sums = data.drop('cput_sec', axis=1).groupby('user').sum()
+        record_sums = data.drop('cput_sec', axis=1).groupby('user').sum(numeric_only=True)
         cput_mean = data.groupby('user')['cput_sec'].mean()
 
         user_data = pd.concat([record_sums, cput_mean], axis=1)
@@ -326,7 +329,7 @@ def print_user_report(df, show_carbon = True):
 
     # Add units
     if show_carbon:
-        units = pd.DataFrame({"mem_eff": " %", "cpu_eff": " %", "carbon_load": " kgCO2e"}, index = ["unit"]).T
+        units = pd.DataFrame({"mem_eff": " %", "cpu_eff": " %", "mem_waste": "GB hours", "carbon_load": " kgCO2e"}, index = ["unit"]).T
     else:
         units = pd.DataFrame({"mem_eff": " %", "cpu_eff": " %"}, index = ["unit"]).T
     user_data = pd.concat([user_data, units], axis = 1)
