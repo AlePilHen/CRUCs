@@ -6,7 +6,7 @@ Created: April 2023 - Updated continously
 
 ## TLDR
 
-Step 1: Type `python torqueDork` in the commandline. 
+Step 1: Type `python torqueDork.py` in the commandline. 
 
 Step 2: Such cool, much wow
 
@@ -21,13 +21,14 @@ In short, `TorqueDork`does 3 things:
 
 The results that are printed to the screen are in the form of bar charts showing how the different users perform compared to eachother. Top users (with the best score) are shown at the top.
 
-## What metrics does `TorqueDork`compute?
+## What metrics does `TorqueDork` compute?
 
-`TorqueDork` computes 3 metrics that are printed to the screen.
+`TorqueDork` computes 4 metrics that are printed to the screen.
 
 1. Memory efficiency - Used memory / reserved memory
 2. CPU time efficiency - Used CPU time / reserved CPU time  (reserved CPU time is the spent walltime * nr of cores)
-3. Carbon load - Estimated carbon footprint resulting from the jobs of that user.
+3. Memory waste - Reserved memory - used memory, measured in GB hours
+4. Carbon load - Estimated carbon footprint resulting from the jobs of that user.
 
 ## Flags
 

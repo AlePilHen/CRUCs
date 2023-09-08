@@ -238,9 +238,9 @@ class ScrapeTorque(object):
         torque_file = os.path.join(self.torque_path, date)
 
         # Check if the file exists
-        if not os.path.isfile(torque_file):
-            print("File {} does not exist.".format(torque_file))
-            return
+        #if not os.path.isfile(torque_file):
+        #    print("File {} does not exist.".format(torque_file))
+        #    return
 
         # Open the torque accounting file
         with open(torque_file, "r") as infile:
