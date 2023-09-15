@@ -472,7 +472,7 @@ def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.RawDescriptionHelpFormatter,
                                      description = arg_desc)
 
-    parser.add_argument("-d","--database", dest = "Database_path", default="./test_db.db",
+    parser.add_argument("-d","--database", dest = "Database_path", default=os.getcwd()+"/torque_logs.db",
                         help = "A path to the torque_log database")
     parser.add_argument("-u","--user", dest="user", nargs=1, default=None,
                         help = "Produce a report for the specified user.")

@@ -88,9 +88,9 @@ class ScrapeTorque(object):
         """
 
         database = self.log_path
-        if not os.path.exists(database):
-            print(f"Error: {database} does not exist.")
-            exit(1)
+        #if not os.path.exists(database):
+        #    print(f"Error: {database} does not exist.")
+        #    exit(1)
 
         # Connect to the database
         conn = sqlite3.connect(database,
@@ -238,9 +238,9 @@ class ScrapeTorque(object):
         torque_file = os.path.join(self.torque_path, date)
 
         # Check if the file exists
-        #if not os.path.isfile(torque_file):
-        #    print("File {} does not exist.".format(torque_file))
-        #    return
+        if not os.path.isfile(torque_file):
+            print("File {} does not exist.".format(torque_file))
+            return
 
         # Open the torque accounting file
         with open(torque_file, "r") as infile:
@@ -346,8 +346,8 @@ def parse_args():
 
     parser.add_argument("-p","--path", dest = "torque_path", default="/var/spool/torque/server_priv/accounting", 
                         help = "Path to torque accounting logs")
-    parser.add_argument("-l","--log", dest="log_path", default="/var/spool/torque/server_priv/accounting",
-                        help = "Path to output/input log file")
+    parser.add_argument("-l","--log_db", dest="log_path", default=os.getcwd()+"/torque_logs.db",
+                        help = "Path to output sqlite3 database ")
     parser.add_argument("-w","--window", dest="past_window", default=7, type=int,
                         help = "Number of days to look back in time")
     parser.add_argument("-s","--server_logs", dest="server_logs", default=False, action="store_true",

@@ -6,9 +6,11 @@ Created: April 2023 - Updated continously
 
 ## TLDR
 
-Step 1: Type `python torqueDork.py` in the commandline. 
+Step 1: Run scrapeTorque.py `python scrapeTorque.py`
 
-Step 2: Such cool, much wow
+Step 2: Type `python torqueDork.py` in the commandline. 
+
+Step 3: Such cool, much wow
 
 ## What is TorqueDork?
 
@@ -36,3 +38,25 @@ There are several flags which you can use to customize the `TorqueDork` call.
 - `-p, --period`        Lets you specify the number of days into the past you want to query records.
 - `-c, --no_carbon`     Flag for NOT computing the carbon load. Default is to compute it.
 - `-u, --user`          Specify a user and provide only a small report for that user, instead of the default bar charts.
+- `-d, --database`      Specify the path to the `sqlite3` database that holds the records. Default is `./torque_logs.db`
+
+## How to set up `TorqueDork`
+
+### Step 1: Clone the repository
+
+Clone the repository to your local machine.
+
+### Step 2: Install dependencies
+
+Install the dependencies listed in the `requirements.txt` file. You can do this by running the following command in the terminal:
+
+`pip install -r requirements.txt`
+
+### Step 3: Run the scraper
+
+TorqueDork uses a scraper to scrape the Torque database. This scraper is called `scrapeTorque.py`. Shortly, this scraper will query the Torque database and store the results in a `sqlite3` database.
+Run the scraper by typing `python scrapeTorque.py` in the commandline. This will create a `sqlite3` database at the path which you provided with the `--log_db` flag. If you did not provide a path, the database will be created in the same folder as the scraper.
+
+### Step 4: Enjoy your fresh results
+
+Now that you have a database with all the records, you can run `TorqueDork`. This is done by typing `python torqueDork.py` in the commandline. This will print a report to the screen. If you want to customize the report, you can use the flags described above.
