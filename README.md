@@ -30,7 +30,7 @@ The results that are printed to the screen are in the form of bar charts showing
 1. Memory efficiency - Used memory / reserved memory
 2. CPU time efficiency - Used CPU time / reserved CPU time  (reserved CPU time is the spent walltime * nr of cores)
 3. Memory waste - Reserved memory - used memory, measured in GB hours
-4. Carbon load - Estimated carbon footprint resulting from the jobs of that user.
+4. Carbon load - Estimated carbon footprint resulting from the jobs of that user. (Using `ScienceFarts`)
 
 ## Flags
 
@@ -60,3 +60,7 @@ Run the scraper by typing `python scrapeTorque.py` in the commandline. This will
 ### Step 4: Enjoy your fresh results
 
 Now that you have a database with all the records, you can run `TorqueDork`. This is done by typing `python torqueDork.py` in the commandline. This will print a report to the screen. If you want to customize the report, you can use the flags described above.
+
+## ScienceFarts
+
+`ScienceFarts` is a another small script that I build for use with `TorqueDork`. It is a small script that estimates the carbon footprint of a job. It can also be used to calculate the cumulative footprint from a `snakemake`log file or to estimate the carbon footprint of a future job, given the resources it will use. You can read more about `ScienceFarts` in the `README_ScienceFarts.md` file.

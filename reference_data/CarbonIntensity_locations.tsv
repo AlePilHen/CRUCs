@@ -1,0 +1,235 @@
+Country	Code	Year	Carbon_intensity	Unit
+afghanistan	AFG	2021	120.481926	gCO2/kWh
+africa	NA	2021	488.25848	gCO2/kWh
+africa (ember)	NA	2022	491.6929	gCO2/kWh
+albania	ALB	2021	23.437498	gCO2/kWh
+algeria	DZA	2021	498.9037	gCO2/kWh
+american samoa	ASM	2021	687.5	gCO2/kWh
+angola	AGO	2021	195.98296	gCO2/kWh
+antigua and barbuda	ATG	2021	657.1429	gCO2/kWh
+argentina	ARG	2022	338.2752	gCO2/kWh
+armenia	ARM	2021	222.6776	gCO2/kWh
+aruba	ABW	2021	591.3978	gCO2/kWh
+asean (ember)	NA	2022	502.73425	gCO2/kWh
+asia	NA	2021	538.281	gCO2/kWh
+asia (ember)	NA	2022	532.1157	gCO2/kWh
+australia	AUS	2022	503.17862	gCO2/kWh
+austria	AUT	2022	157.52046	gCO2/kWh
+azerbaijan	AZE	2021	532.9022	gCO2/kWh
+bahamas	BHS	2021	698.1133	gCO2/kWh
+bahrain	BHR	2021	489.77023	gCO2/kWh
+bangladesh	BGD	2022	577.02686	gCO2/kWh
+barbados	BRB	2021	644.85974	gCO2/kWh
+belarus	BLR	2021	415.64066	gCO2/kWh
+belgium	BEL	2022	165.36267	gCO2/kWh
+belize	BLZ	2021	484.375	gCO2/kWh
+benin	BEN	2021	666.6667	gCO2/kWh
+bhutan	BTN	2021	24.444445	gCO2/kWh
+bolivia	BOL	2022	323.86865	gCO2/kWh
+bosnia and herzegovina	BIH	2022	517.24133	gCO2/kWh
+botswana	BWA	2021	794.5205	gCO2/kWh
+brazil	BRA	2022	102.044426	gCO2/kWh
+british virgin islands	VGB	2021	714.2857	gCO2/kWh
+brunei	BRN	2021	658.8486	gCO2/kWh
+bulgaria	BGR	2022	399.565	gCO2/kWh
+burkina faso	BFA	2021	611.4286	gCO2/kWh
+burundi	BDI	2022	250.00002	gCO2/kWh
+cambodia	KHM	2021	400.46033	gCO2/kWh
+cameroon	CMR	2021	278.26086	gCO2/kWh
+canada	CAN	2022	127.815544	gCO2/kWh
+cape verde	CPV	2021	600	gCO2/kWh
+cayman islands	CYM	2021	684.9315	gCO2/kWh
+central african republic	CAF	2021	0	gCO2/kWh
+chad	TCD	2021	677.4193	gCO2/kWh
+chile	CHL	2022	332.61234	gCO2/kWh
+china	CHN	2022	531.15076	gCO2/kWh
+colombia	COL	2022	168.9541	gCO2/kWh
+comoros	COM	2021	714.2857	gCO2/kWh
+congo	COG	2021	395.5224	gCO2/kWh
+cook islands	COK	2021	400	gCO2/kWh
+costa rica	CRI	2022	37.212986	gCO2/kWh
+cote d'ivoire	CIV	2021	410.74686	gCO2/kWh
+croatia	HRV	2022	246.45894	gCO2/kWh
+cuba	CUB	2021	602.0253	gCO2/kWh
+cyprus	CYP	2022	589.3536	gCO2/kWh
+czechia	CZE	2022	415.34482	gCO2/kWh
+democratic republic of congo	COD	2021	25.36232	gCO2/kWh
+denmark	DNK	2022	180.7089	gCO2/kWh
+djibouti	DJI	2021	666.6667	gCO2/kWh
+dominica	DMA	2021	529.4118	gCO2/kWh
+dominican republic	DOM	2021	550.88116	gCO2/kWh
+east timor	TLS	2021	698.1133	gCO2/kWh
+ecuador	ECU	2022	188.70775	gCO2/kWh
+egypt	EGY	2022	485.3669	gCO2/kWh
+el salvador	SLV	2022	194.22572	gCO2/kWh
+equatorial guinea	GNQ	2021	492.95773	gCO2/kWh
+eritrea	ERI	2021	688.88885	gCO2/kWh
+estonia	EST	2022	464.02875	gCO2/kWh
+eswatini	SWZ	2021	189.1892	gCO2/kWh
+ethiopia	ETH	2021	25.187202	gCO2/kWh
+europe	NA	2021	278.36868	gCO2/kWh
+europe (ember)	NA	2022	298.03613	gCO2/kWh
+european union (27)	NA	2021	261.76843	gCO2/kWh
+falkland islands	FLK	2021	500	gCO2/kWh
+faroe islands	FRO	2021	428.57147	gCO2/kWh
+fiji	FJI	2021	289.4737	gCO2/kWh
+finland	FIN	2022	130.97685	gCO2/kWh
+france	FRA	2022	84.817245	gCO2/kWh
+french guiana	GUF	2011	254.71701	gCO2/kWh
+french polynesia	PYF	2021	471.4286	gCO2/kWh
+g20 (ember)	NA	2022	440.49875	gCO2/kWh
+g7 (ember)	NA	2022	341.11542	gCO2/kWh
+gabon	GAB	2021	397.37994	gCO2/kWh
+gambia	GMB	2021	699.99994	gCO2/kWh
+georgia	GEO	2022	134.83145	gCO2/kWh
+germany	DEU	2022	385.46744	gCO2/kWh
+ghana	GHA	2021	361.20398	gCO2/kWh
+greece	GRC	2022	343.82153	gCO2/kWh
+greenland	GRL	2021	133.33333	gCO2/kWh
+grenada	GRD	2021	714.28577	gCO2/kWh
+guadeloupe	GLP	2011	611.7647	gCO2/kWh
+guam	GUM	2021	670.3297	gCO2/kWh
+guatemala	GTM	2021	320.63712	gCO2/kWh
+guinea	GIN	2021	208.63307	gCO2/kWh
+guinea-bissau	GNB	2021	750	gCO2/kWh
+guyana	GUY	2021	642.2764	gCO2/kWh
+haiti	HTI	2021	606.06067	gCO2/kWh
+high-income countries	NA	2021	357.21918	gCO2/kWh
+honduras	HND	2021	375.10443	gCO2/kWh
+hong kong	HKG	2021	683.9716	gCO2/kWh
+hungary	HUN	2022	222.97298	gCO2/kWh
+iceland	ISL	2021	28.556593	gCO2/kWh
+india	IND	2022	632.4057	gCO2/kWh
+indonesia	IDN	2022	618.9962	gCO2/kWh
+iran	IRN	2022	493.5951	gCO2/kWh
+iraq	IRQ	2021	498.86902	gCO2/kWh
+ireland	IRL	2022	346.3255	gCO2/kWh
+israel	ISR	2021	548.02954	gCO2/kWh
+italy	ITA	2022	371.69193	gCO2/kWh
+jamaica	JAM	2021	519.5402	gCO2/kWh
+japan	JPN	2022	482.86993	gCO2/kWh
+jordan	JOR	2021	399.9086	gCO2/kWh
+kazakhstan	KAZ	2022	635.57367	gCO2/kWh
+kenya	KEN	2022	100.56772	gCO2/kWh
+kiribati	KIR	2021	666.6667	gCO2/kWh
+kosovo	OWID_KOS	2022	768.73267	gCO2/kWh
+kuwait	KWT	2021	489.60962	gCO2/kWh
+kyrgyzstan	KGZ	2021	104.426	gCO2/kWh
+laos	LAO	2021	242.18164	gCO2/kWh
+latin america and caribbean (ember)	NA	2022	240.4424	gCO2/kWh
+latvia	LVA	2022	181.81819	gCO2/kWh
+lebanon	LBN	2021	594.75214	gCO2/kWh
+lesotho	LSO	2021	20	gCO2/kWh
+liberia	LBR	2021	304.34784	gCO2/kWh
+libya	LBY	2021	550.4215	gCO2/kWh
+lithuania	LTU	2022	194.2446	gCO2/kWh
+low-income countries	NA	2021	216.90265	gCO2/kWh
+lower-middle-income countries	NA	2021	538.10614	gCO2/kWh
+luxembourg	LUX	2022	168.14159	gCO2/kWh
+macao	MAC	2021	491.5254	gCO2/kWh
+madagascar	MDG	2021	483.25363	gCO2/kWh
+malawi	MWI	2021	133.80281	gCO2/kWh
+malaysia	MYS	2022	543.7372	gCO2/kWh
+maldives	MDV	2021	651.5152	gCO2/kWh
+mali	MLI	2021	466.0767	gCO2/kWh
+malta	MLT	2022	495	gCO2/kWh
+martinique	MTQ	2011	698.6301	gCO2/kWh
+mauritania	MRT	2021	526.59576	gCO2/kWh
+mauritius	MUS	2021	611.1111	gCO2/kWh
+mexico	MEX	2022	421.40198	gCO2/kWh
+middle east (ember)	NA	2021	515.4748	gCO2/kWh
+moldova	MDA	2022	678.4386	gCO2/kWh
+mongolia	MNG	2022	749.6561	gCO2/kWh
+montenegro	MNE	2022	399.3808	gCO2/kWh
+montserrat	MSR	2021	1000	gCO2/kWh
+morocco	MAR	2021	610.41156	gCO2/kWh
+mozambique	MOZ	2021	126.63316	gCO2/kWh
+myanmar	MMR	2021	344.36493	gCO2/kWh
+namibia	NAM	2021	63.694267	gCO2/kWh
+nauru	NRU	2021	750	gCO2/kWh
+nepal	NPL	2021	24.509806	gCO2/kWh
+netherlands	NLD	2022	355.77798	gCO2/kWh
+new caledonia	NCL	2021	610.119	gCO2/kWh
+new zealand	NZL	2022	97.73243	gCO2/kWh
+nicaragua	NIC	2021	354.21164	gCO2/kWh
+niger	NER	2021	622.2222	gCO2/kWh
+nigeria	NGA	2022	368.2243	gCO2/kWh
+north america	NA	2021	352.24173	gCO2/kWh
+north america (ember)	NA	2022	336.26154	gCO2/kWh
+north korea	PRK	2021	157.78548	gCO2/kWh
+north macedonia	MKD	2022	529.32764	gCO2/kWh
+norway	NOR	2022	28.818445	gCO2/kWh
+oceania	NA	2021	474.87375	gCO2/kWh
+oceania (ember)	NA	2022	446.55026	gCO2/kWh
+oecd (ember)	NA	2022	338.66144	gCO2/kWh
+oman	OMN	2022	488.27176	gCO2/kWh
+pakistan	PAK	2022	344.15454	gCO2/kWh
+palestine	PSE	2021	465.11627	gCO2/kWh
+panama	PAN	2021	192.13585	gCO2/kWh
+papua new guinea	PNG	2021	526.74896	gCO2/kWh
+paraguay	PRY	2021	25.487255	gCO2/kWh
+peru	PER	2022	256.51236	gCO2/kWh
+philippines	PHL	2022	582.04724	gCO2/kWh
+poland	POL	2022	634.5789	gCO2/kWh
+portugal	PRT	2022	234.02895	gCO2/kWh
+puerto rico	PRI	2021	681.4693	gCO2/kWh
+qatar	QAT	2022	489.7603	gCO2/kWh
+reunion	REU	2011	519.0311	gCO2/kWh
+romania	ROU	2022	264.1208	gCO2/kWh
+russia	RUS	2022	367.18896	gCO2/kWh
+rwanda	RWA	2021	294.11765	gCO2/kWh
+saint kitts and nevis	KNA	2021	681.81824	gCO2/kWh
+saint lucia	LCA	2021	685.71423	gCO2/kWh
+saint pierre and miquelon	SPM	2021	800	gCO2/kWh
+saint vincent and the grenadines	VCT	2021	500	gCO2/kWh
+samoa	WSM	2021	470.58823	gCO2/kWh
+sao tome and principe	STP	2021	600	gCO2/kWh
+saudi arabia	SAU	2021	571.3364	gCO2/kWh
+senegal	SEN	2021	523.1317	gCO2/kWh
+serbia	SRB	2022	569.37537	gCO2/kWh
+seychelles	SYC	2021	615.3846	gCO2/kWh
+sierra leone	SLE	2021	47.61905	gCO2/kWh
+singapore	SGP	2022	488.77533	gCO2/kWh
+slovakia	SVK	2022	140.66592	gCO2/kWh
+slovenia	SVN	2022	237.37755	gCO2/kWh
+solomon islands	SLB	2021	727.2727	gCO2/kWh
+somalia	SOM	2021	634.1463	gCO2/kWh
+south africa	ZAF	2022	708.9888	gCO2/kWh
+south america	NA	2021	206.22043	gCO2/kWh
+south korea	KOR	2022	435.68942	gCO2/kWh
+south sudan	SSD	2021	684.2105	gCO2/kWh
+spain	ESP	2022	217.37299	gCO2/kWh
+sri lanka	LKA	2021	462.99695	gCO2/kWh
+sudan	SDN	2021	264.01447	gCO2/kWh
+suriname	SUR	2021	356.43567	gCO2/kWh
+sweden	SWE	2022	45.083878	gCO2/kWh
+switzerland	CHE	2022	45.62249	gCO2/kWh
+syria	SYR	2021	541.16943	gCO2/kWh
+taiwan	TWN	2022	561.00037	gCO2/kWh
+tajikistan	TJK	2021	83.62899	gCO2/kWh
+tanzania	TZA	2021	366.74817	gCO2/kWh
+thailand	THA	2022	502.30505	gCO2/kWh
+togo	TGO	2021	460.3174	gCO2/kWh
+tonga	TON	2021	625	gCO2/kWh
+trinidad and tobago	TTO	2021	491.40897	gCO2/kWh
+tunisia	TUN	2022	469.428	gCO2/kWh
+turkey	TUR	2022	413.62814	gCO2/kWh
+turkmenistan	TKM	2021	490.1869	gCO2/kWh
+turks and caicos islands	TCA	2021	703.7037	gCO2/kWh
+uganda	UGA	2021	52.272728	gCO2/kWh
+ukraine	UKR	2022	206.53922	gCO2/kWh
+united arab emirates	ARE	2021	461.84473	gCO2/kWh
+united kingdom	GBR	2022	257.37943	gCO2/kWh
+united states	USA	2022	367.2595	gCO2/kWh
+united states virgin islands	VIR	2021	685.71423	gCO2/kWh
+upper-middle-income countries	NA	2021	491.60385	gCO2/kWh
+uruguay	URY	2022	114.809784	gCO2/kWh
+uzbekistan	UZB	2021	505.40543	gCO2/kWh
+vanuatu	VUT	2021	571.4286	gCO2/kWh
+venezuela	VEN	2021	212.47626	gCO2/kWh
+vietnam	VNM	2022	376.82758	gCO2/kWh
+western sahara	ESH	2009	666.6666	gCO2/kWh
+world	OWID_WRL	2022	436.3364	gCO2/kWh
+yemen	YEM	2021	543.90936	gCO2/kWh
+zambia	ZMB	2021	84.69792	gCO2/kWh
+zimbabwe	ZWE	2021	392.279	gCO2/kWh

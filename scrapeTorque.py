@@ -285,7 +285,11 @@ class ScrapeTorque(object):
                     # Extract information
                     for name in patterns.keys():
                         data[name] = self.get_line_match(name, patterns[name], line)
-                
+
+                    # Skip if walltime is 0
+                    if data["used_walltime"] in ["0:00:00", "00:00:00"]:
+                        continue
+                    
                     # In case of server logs as input some values will need to be changed
                     # as these are not present in the log files.
                     if self.server_logs:

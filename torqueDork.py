@@ -507,8 +507,6 @@ if __name__=="__main__":
 
     # Parse input
     db_path, query_user, period, carbon, top_n = parse_args()
-    USER = "Alex"
-
 
     # Run program
     cd = torqueDork(db_path, query_user, period, carbon, top_n)

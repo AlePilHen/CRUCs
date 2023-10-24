@@ -1,0 +1,37 @@
+energy:
+  cpu_core:
+    kW: 0.015
+    Reference: "Personal communication: Piotr"
+  mem_16GB:
+    kW: 0.005
+    Reference: "https://www.tomshardware.com/reviews/intel-core-i7-5960x-haswell-e-cpu,3918-13.html"
+  gpu_full:
+    kW: 0.400
+    Reference: "https://www.techpowerup.com/gpu-specs/a100-sxm4-40-gb.c3506"
+prices:
+  cpu_hour: 
+    DKK: 0.25
+    Reference: "https://www.computerome.dk/pricing"
+  gpu_hour: 
+    DKK: 0.45
+    Reference: "https://www.computerome.dk/pricing"
+emissions:
+  washing_machine_cycle:
+    CO2: 100
+    Reference: "https://sparenergi.dk/forbruger/el/vask-og-rengoering/vaskemaskiner"
+  car_1km:
+    CO2: 125
+    Reference: "https://www.eea.europa.eu/ims/co2-performance-of-new-passenger"
+  tree_month:
+    CO2: 2000
+    Reference: "https://ecotree.green/en/how-much-co2-does-a-tree-absorb"
+  flight_cph_lon:
+    CO2: 150000
+    Reference: "https://calculator.carbonfootprint.com/calculator.aspx?tab=3"
+  ton_offset_min:
+    CO2: 100
+    Reference: "https://terrapass.co.uk/product/personal-carbon-offset-grouped"
+  ton_offset_max:
+    CO2: 400
+    Reference: "https://naturfonden.dk"
+  
