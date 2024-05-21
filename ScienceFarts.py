@@ -205,7 +205,7 @@ class JobStats():
         with open(self.user_input, 'r') as file:
 
             id_list = []
-            id_pattern = "Submitted job \d+ with external jobid '(\d{6})\."
+            id_pattern = "Submitted job \d+ with external jobid '(\d+)\."
 
             for line in file:
 
@@ -354,12 +354,11 @@ class ScienceFarts():
         self.user_input       = self.format_user_input(user_input)
         self.input_type       = input_type
         self.config           = self.load_config(config_file)
-        self.location         = self.config['cluster']['location']
-        self.ref_dir          = os.path.abspath(os.path.join(os.path.dirname(__file__), 'reference_data/'))
+        #self.location         = self.config['cluster']['location']
         self.emission_refs    = os.path.join(self.ref_dir, "emission_references.yaml")
-        self.carbon_intensity = self.determine_config_stats(self.location, stat = "intensity")
-        self.energy_price, \
-        self.price_currency   = self.determine_config_stats(self.location, stat = "price")
+        #self.carbon_intensity = self.set_reference_numbers(self.location, stat = "intensity")
+        #self.energy_price, \
+        #self.price_currency   = self.set_reference_numbers(self.location, stat = "price")
         self.stats_df         = None
         self.stats_out        = None
 
@@ -394,54 +393,109 @@ class ScienceFarts():
 
         with open(config_file, "r") as stream:
             try:
-                cluster_info = yaml.safe_load(stream)
+                config_info = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
         
-        return cluster_info
+        self.ref_dir = config_info['references']['reference_dir']
+        self.location = config_info['cluster']['location']
+
+        # Setup hardware configuration
+        if config_info['cluster']['hardware']['cpu']['model'] != "custom":
+            self.set_hardware_specs(config_info, 'cpu')
+
+        if config_info['cluster']['hardware']['gpu']['model'] != "custom":
+            self.set_hardware_specs(config_info, 'gpu')
+        
+        # Setup carbon intensity and energy price
+        self.set_reference_numbers(config_info['references'], stat = "intensity")
+        self.set_reference_numbers(config_info['references'], stat = "price")
+
+        return config_info
+    
+
+    ## --- Look up hardware specs
+    def set_hardware_specs(self, config_info, hardware):
+
+        ref_cpu = os.path.join(self.ref_dir, config_info['references']['hardware']['ref_cpu'])
+        ref_gpu = os.path.join(self.ref_dir, config_info['references']['hardware']['ref_gpu'])
+
+        cluster_info = config_info['cluster']
+
+        if hardware == "cpu":
+
+            cpu_ref = pd.read_csv(ref_cpu, delimiter=',')
+            hardware_model = cluster_info['hardware']['cpu']['model']
+            default_model = cluster_info['hardware']['cpu']['default_model']
+
+            try:
+                cluster_info['hardware']['cpu']['watts'] = cpu_ref.loc[cpu_ref['model'] == hardware_model]['TDP_per_core'].item()
+                cluster_info['hardware']['cpu']['cores'] = cpu_ref.loc[cpu_ref['model'] == hardware_model]['n_cores'].item()
+            except:
+                print(f"Hardware model {hardware_model} not found in reference file {ref_cpu}.")
+                print(f"Using default CPU hardware")
+                cluster_info['hardware']['cpu']['watts'] = cpu_ref.loc[cpu_ref['model'] == default_model]['TDP_per_core'].item()
+                cluster_info['hardware']['cpu']['cores'] = cpu_ref.loc[cpu_ref['model'] == default_model]['n_cores'].item()
+
+        elif hardware == "gpu":
+
+            gpu_ref = pd.read_csv(ref_gpu, delimiter=',')
+            hardware_model = cluster_info['hardware']['gpu']['model']
+            default_model = cluster_info['hardware']['gpu']['default_model']
+
+            try:
+                cluster_info['hardware']['gpu']['watts'] = gpu_ref.loc[gpu_ref['model'] == hardware_model]['TDP'].item()
+            except:
+                print(f"Hardware model {hardware_model} not found in reference file {ref_gpu}.")
+                print(f"Using default GPU hardware")
+                cluster_info['hardware']['gpu']['watts'] = gpu_ref.loc[gpu_ref['model'] == default_model]['TDP'].item()
+        
+                
     
 
     ## --- Determine carbon intensity
-    def determine_config_stats(self, location, stat):
+    def set_reference_numbers(self, reference_info, stat):
 
-        location = location.lower()
+        location = self.location.lower()
 
         # Fetch carbon intensity from config / reference file
         if stat == "intensity":
 
-            if self.config['cluster']['carbon']['custom_intensity_file']:
-                carbon_intensity = pd.read_csv(os.path.abspath(self.config['cluster']['carbon']['custom_intensity_file']),
+            if reference_info['carbon']['custom_intensity_file']:
+                self.carbon_intensity = pd.read_csv(os.path.join(self.ref_dir, reference_info['carbon']['custom_intensity_file']),
                                                     delimiter='\t', names = [str(n) for n in range(0,24)])
-            elif self.config['cluster']['carbon']['carbon_intensity']:
-                carbon_intensity = self.config['cluster']['carbon']['carbon_intensity']
+            elif reference_info['carbon']['carbon_intensity']:
+                self.carbon_intensity = reference_info['carbon']['carbon_intensity']
             else:
-                carbon_intensities = pd.read_csv(os.path.abspath(self.config['cluster']['carbon']['carbon_ref']), delimiter='\t')
-                carbon_intensity = carbon_intensities.loc[carbon_intensities['Country'] == location]['Carbon_intensity'].item()
+                carbon_intensities = pd.read_csv(os.path.join(self.ref_dir, reference_info['carbon']['carbon_ref']), delimiter='\t')
+                self.carbon_intensity = carbon_intensities.loc[carbon_intensities['Country'] == location]['Carbon_intensity'].item()
 
             # Check if carbon intensity was found
-            if carbon_intensity is None:
+            if self.carbon_intensity is None:
                 print(f"Carbon intensity was not found. Please define it in the config file.")
                 sys.exit()
 
-            return carbon_intensity
         
-        # Fetch carbon price from config / reference file
+        # Fetch energy price from config / reference file
         elif stat == "price":
 
-            if self.config['cluster']['price']['custom_price_table']:
-                energy_price = pd.read_csv(os.path.abspath(self.config['cluster']['price']['custom_price_table']),
+            if reference_info['price']['energy_price']:
+                self.energy_price = reference_info['price']['energy_price']
+                self.price_currency = reference_info['price']['price_currency']
+            elif reference_info['price']['custom_price_table']:
+                self.energy_price = pd.read_csv(os.path.join(self.ref_dir, reference_info['price']['custom_price_table']),
                                                     delimiter='\t', names = [str(n) for n in range(0,24)])
-                price_currency = self.config['cluster']['price']['price_currency']
+                self.price_currency = reference_info['price']['price_currency']
             else:
-                energy_price = self.config['cluster']['price']['energy_price']
-                price_currency = self.config['cluster']['price']['price_currency']
+                energy_prices = pd.read_csv(os.path.join(self.ref_dir, reference_info['price']['price_ref']), delimiter=',')
+                self.energy_price = energy_prices.loc[energy_prices['country'] == location]['price'].item()
+                self.price_currency = reference_info['price']['price_currency']
 
             # Check if energy price was found
-            if energy_price is None or price_currency is None:
+            if self.energy_price is None or self.price_currency is None:
                 print(f"Energy price/currency was not found. Please define it in the config file.")
                 sys.exit()
 
-            return energy_price, price_currency
 
 
     ## --- Format user input to avoid errors
@@ -467,7 +521,7 @@ class ScienceFarts():
         self.stats_df["cpu_efficiency"] = self.stats_df.apply(self.calculate_cpu_efficiency_row, axis = 1)
         self.stats_df["energy_kwh"]     = self.stats_df.apply(self.calculate_energy_row, axis = 1)
         self.stats_df["per_hour_kWh"]   = self.stats_df.apply(lambda row: row["energy_kwh"] / (row["walltime"].total_seconds() / 3600), axis = 1)
-        self.stats_df["cost_DKK"]       = self.stats_df.apply(self.calculate_energy_price_row, axis = 1)
+        self.stats_df["energy_price"]   = self.stats_df.apply(self.calculate_energy_price_row, axis = 1)
         self.stats_df["emissions_g"]    = self.stats_df.apply(self.calculate_emissions_row, axis = 1)
 
 
@@ -483,14 +537,14 @@ class ScienceFarts():
         # Calculate total resource use
         total_energy_use = round(sum(self.stats_df["energy_kwh"]), 2)
         total_emissions  = round(sum(self.stats_df["emissions_g"]), 2)
-        total_dkk        = round(sum(self.stats_df["cost_DKK"]), 2)
+        total_price      = round(sum(self.stats_df["energy_price"]), 2)
 
 
         # Add total resource use to output dictionary
         self.stats_out = {"total_cpu_time":   total_cpu_time,
                           "total_energy_use": total_energy_use,
                           "total_emissions":  total_emissions,
-                          "total_dkk":        total_dkk,
+                          "total_price":      total_price,
                           "total_efficiency": total_efficiency}
 
         # Add additional information to output dictionary
@@ -520,11 +574,11 @@ class ScienceFarts():
             reference_data = yaml.safe_load(file)
 
         # Calculate energy use
-        energy_use_ram = row["cpu_time"] * row["ram_sticks"] * reference_data["energy"]["mem_16GB"]["kW"]
-        energy_use_cpu = row["cpu_time"] * reference_data["energy"]["cpu_core"]["kW"]
-        energy_use_gpu = row["gpus"] * row["walltime"].total_seconds() * reference_data["energy"]["gpu_full"]["kW"]
+        energy_use_ram_W = row["cpu_time"] * row["ram_sticks"] * self.config["cluster"]["hardware"]["ram"]["watts_pr_GB"]
+        energy_use_cpu_W = row["cpu_time"] * self.config["cluster"]["hardware"]["cpu"]["watts"]
+        energy_use_gpu_W = row["gpus"] * row["walltime"].total_seconds() * self.config["cluster"]["hardware"]["gpu"]["watts"] 
 
-        energy_use_kWh = (energy_use_cpu + energy_use_ram + energy_use_gpu) / 3600
+        energy_use_kWh = (energy_use_cpu_W + energy_use_ram_W + energy_use_gpu_W) / 1000 / 3600
 
         return energy_use_kWh
 
@@ -621,9 +675,9 @@ class ScienceFarts():
         self.stats_out["rel_tree_month"] = round(emissions / reference_data["emissions"]["tree_month"]["CO2"], 2)
         self.stats_out["rel_cph_london"] = round(emissions / reference_data["emissions"]["flight_cph_lon"]["CO2"], 3)
 
-        ## Calculate offsetting prices
-        self.stats_out["rel_offset_min"] = round(emissions / 1000000 * reference_data["emissions"]["ton_offset_min"]["CO2"], 2)
-        self.stats_out["rel_offset_max"] = round(emissions / 1000000 * reference_data["emissions"]["ton_offset_max"]["CO2"], 2)
+        ## Calculate carbon prices
+        self.stats_out["rel_carbon_price_min"] = round(emissions / 1000000 * reference_data["prices"]["carbon_ton_price_min"]["EUR"], 2)
+        self.stats_out["rel_carbon_price_max"] = round(emissions / 1000000 * reference_data["prices"]["carbon_ton_price_max"]["EUR"], 2)
 
 
 
@@ -646,9 +700,9 @@ def print_output(self, res_dict):
     print(f"      number of 16GB RAM sticks used: {res_dict['ram_sticks_used']}")
     print("")
     print(f"      Estimated energy use:          {res_dict['total_energy_use']} kWh")
-    print(f"      Estimated data center cost:    {res_dict['total_dkk']} {self.price_currency}")
+    print(f"      Estimated energy cost:         {res_dict['total_price']} {self.price_currency}")
     print(f"      Estimated emissions generated: {res_dict['total_emissions']} g CO2")
-    print(f"      Price to offset carbon:        {res_dict['rel_offset_min']}-{res_dict['rel_offset_max']} DKK")
+    print(f"      EU price of carbon emissions:  {res_dict['rel_carbon_price_min']}-{res_dict['rel_carbon_price_max']} EUR")
     print("")
     print("      The carbon generated from your script corresponds to:")
     print(f"      - running {res_dict['rel_washing']} cycles on a washing mashine")

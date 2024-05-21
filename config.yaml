@@ -1,0 +1,97 @@
+## CONFIGURATION FILE FOR SCIENCEFARTS
+## -----------------------------------
+
+# Specification of the cluster / server
+# ---------------------------
+cluster:
+
+  location: "Denmark" # Location of your server
+
+  hardware:
+
+    # Here you specify the hardware (CPU and GPU) on your server
+    # You can find examples of hardware in the TDP_CPU.csv and TDP_GPU.csv files in the reference_data folder
+    # If you don't know the exact model of your hardware, you can use the "custom" model and specify the power consumption manually
+    # Otherwise, you can type 'cat /proc/cpuinfo' and 'nvidia-smi' in the terminal to find the hardware models
+
+    cpu: 
+      model: "Xeon Gold 6230"  # CPU hardware model (will be used to look up power consumption in TDP_CPU.csv)
+      
+      # If you want to use a custom power consumption for the CPU, you can specify it here
+      # NB: To use this you must call the hardware model "custom" in the model field
+      cores: 20         # Number of cores
+      watts: 5.0        # Power consumption per core in watts
+
+      default_model: "Xeon Gold 6230"  # Default CPU model (used if model is not specified)
+
+    gpu: 
+      model: "NVIDIA Tesla A100 PCIe 40GB"  # GPU hardware model (will be used to look up power consumption in TDP_GPU.csv)
+
+      # If you want to use a custom power consumption for the GPU, you can specify it here
+      # NB: To use this you must call the hardware model "custom" in the model field
+      watts: 300      # Power consumption in watts
+
+      default_model: "NVIDIA Tesla A100 PCIe 40GB"  # Default GPU model (used if model is not specified)
+
+    ram:
+      watts_pr_GB: 0.3725  # Power consumption per GB of RAM in watts (source: https://onlinelibrary.wiley.com/doi/10.1002/advs.202100707)
+
+  
+
+   
+
+
+# References for hardware specs, carbon intensity, and electricity prices
+# ---------------------------
+references:
+
+  reference_dir: /Users/brf551/Library/CloudStorage/OneDrive-UniversityofCopenhagen/Documents/Various/Coding/TorqueDork/reference_data
+
+  hardware:
+
+    # Reference files for power consumption of hardware (Shouldn't be changed unless you have updated data)
+    ref_cpu: TDP_CPU.csv
+    ref_gpu: TDP_GPU.csv
+
+  carbon:
+
+    # If "Denmark" is your location, the calculation can include data from the Danish grid
+    # This data is stored in reference_data/MonthHour_emissions.tsv 
+    # Otherwise, a reference for your chosen national grid will be used
+
+    # path to file with global carbon intensity data (shouldn't be changed unless you have updated data)
+    carbon_ref: CarbonIntensity_locations.tsv
+
+    ## -- Custom reference -- ##
+
+    # If you want to use your own carbon intensity measures you have two options:
+    # 1) Specify the carbon intensity in gCO2/kWh in the "carbon_intensity" field
+    # 2) Specify the path to a file with carbon intensity data in the "emissions_file" field
+    #    The file should have a similar format to reference_data/MonthHour_emissions.tsv, 
+    #    which is described in more detail in the README_ScienceFarts.md file.
+
+    carbon_intensity:  # Carbon intensity in gCO2/kWh
+    custom_intensity_file: "DK_MonthHour_emissions.tsv"  # File with detailed carbon intensity data from Denmark
+
+  price:
+
+    # If "Denmark" is your location, the calculation can include data from the Danish grid (See "Custom reference" below)
+    # This data is stored in reference_data/WeekdayHour_prices.tsv
+    # Otherwise, reference numbers for your chosen national grid will be used
+
+    # path to file with global electricity price data (shouldn't be changed unless you have updated data)
+    price_ref: EnergyPrice_locations.csv
+
+    ## -- Custom reference -- ##
+
+    # If you want to use your own electricity price data you have two options:
+    # 1) Specify the price in currency/kWh in the "energy_price" field
+    # 2) Specify the path to a file with price data in the "custom_price_table" field
+    #    The file should have a similar format to reference_data/WeekdayHour_prices.tsv
+
+    energy_price:          # Price of electricity in currency/kWh        
+    price_currency: "DKK"    # Currency of the price
+    custom_price_table: "DK_WeekdayHour_prices.tsv"  # File with detailed price data from Denmark (in DKK)
+
+
+

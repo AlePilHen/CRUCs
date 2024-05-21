@@ -50,7 +50,6 @@ import pandas as pd
 # Try to import ScienceFarts
 try:
     import ScienceFarts
-    #from def_print_user_results import print_user_results
 except ImportError:
     print("ScienceFarts is not installed. Please install it to compute carbon load.")
 
@@ -71,6 +70,25 @@ def format_numeric_result(number):
         out_number = "{:,}".format(int(number))
 
     return out_number
+
+
+def color_text(text, color):
+
+    colors = {
+        'red': '\033[31m',
+        'green': '\033[32m',
+        'yellow': '\033[33m',
+        'blue': '\033[34m',
+        'magenta': '\033[35m',
+        'cyan': '\033[36m',
+        'white': '\033[37m',
+        'purple': '\033[94m',
+        'magenta': '\033[95m',
+    }
+
+    reset_color = '\033[0m'
+    return f"{colors[color]}{text}{reset_color}"
+
 
 
 ## ------------------- Classes ------------------- ##
@@ -105,7 +123,7 @@ class torqueDork(object):
 
         # Check if user exists
         if self.query_user not in self.query_data.user.values and self.query_user is not None:
-            print(f"ERROR: The user '{self.query_user}' does not exist in the log file.")
+            print(f"ERROR: The user {color_text(self.query_user, 'blue')} does not exist in the log file.")
             sys.exit()
 
         # Compute stats from log data
@@ -141,7 +159,8 @@ class torqueDork(object):
         # See if extracted dataframe is empty
         if data.empty:
             if self.query_user:
-                print(f"-- No data for user {self.query_user} in the past {self.period} days. Try again")
+                print(f"-- No data for user {color_text(self.query_user,'purple')} in the past {self.period} days.")
+                print(f"   Check the user name or try a different period.")
             else:
                 print("-- No data for the last {self.period} days. Try again")
             sys.exit(1)
@@ -230,13 +249,13 @@ class torqueDork(object):
         
         # Calculate efficiency
         data = data[["user", "mem_req_mb", "mem_mb", "walltime_sec"]].copy()
-        data.loc[:,"waste"] = (data["mem_req_mb"] - data["mem_mb"]) / 1000 / (data["walltime_sec"] / 3600)
+        data.loc[:,"waste_gb_hour"] = (data["mem_req_mb"] - data["mem_mb"]) / 1000 / (data["walltime_sec"] / 3600)
 
         # Sort and clip at 1
-        stats = data.loc[:, ["user", "waste"]].groupby("user").sum(numeric_only=True)
-        stats = stats.rename(columns={"waste": "mem_waste"})
+        stats = data.loc[:, ["user", "waste_gb_hour"]].groupby("user").sum(numeric_only=True)
+        stats = stats.rename(columns={"waste_gb_hour": "mem_waste_gb_hour"})
         # turn into integer and turn NAN to 0
-        stats["mem_waste"] = stats["mem_waste"].fillna(0).apply(lambda x: int(x))
+        stats["mem_waste_gb_hour"] = stats["mem_waste_gb_hour"].fillna(0).apply(lambda x: int(x))
 
         return stats
 
@@ -329,7 +348,7 @@ def print_user_report(df, show_carbon = True):
 
     # Add units
     if show_carbon:
-        units = pd.DataFrame({"mem_eff": " %", "cpu_eff": " %", "mem_waste": "GB hours", "carbon_load": " kgCO2e"}, index = ["unit"]).T
+        units = pd.DataFrame({"mem_eff": " %", "cpu_eff": " %", "mem_waste_gb_hour": "GB hours", "carbon_load": " kgCO2e"}, index = ["unit"]).T
     else:
         units = pd.DataFrame({"mem_eff": " %", "cpu_eff": " %"}, index = ["unit"]).T
     user_data = pd.concat([user_data, units], axis = 1)
@@ -369,7 +388,7 @@ def print_results(df, query_user, top_n = 5):
         elif metric == 'cpu_eff':
             title  = "CPU efficiency \U0001F551"
             df_metric = df.copy().sort_values(metric, ascending=False)
-        elif metric == 'mem_waste':
+        elif metric == 'mem_waste_gb_hour':
             title  = "Memory waste \U0001F5D1"
             df_metric = df.copy().sort_values(metric, ascending=False)
         elif metric == 'carbon_load':
@@ -401,7 +420,7 @@ def print_results(df, query_user, top_n = 5):
             df_top = pd.concat([df_top, df_metric[df_metric['User'] == current_user]])
 
         # Print the header
-        if metric == 'mem_waste':
+        if metric == 'mem_waste_gb_hour':
             scale = "Absolute memory waste (Gigabyte Hours)"
         elif metric == "carbon_load":
             scale = "Total carbon load (kgCO2e)"
@@ -420,7 +439,7 @@ def print_results(df, query_user, top_n = 5):
             result = row[metric]
 
             # Calculate the length of the bar based on the 'Result' value and maximum bar length
-            if metric in ['carbon_load', 'mem_waste']:
+            if metric in ['carbon_load', 'mem_waste_gb_hour']:
                 max_result = df_metric[metric].max()
                 bar_length = int(result * max_bar_length / max_result)
             else:
@@ -432,7 +451,7 @@ def print_results(df, query_user, top_n = 5):
 
             # Determine the color for printing based on the rank, username, and 'name' parameter
             if rank == 1:
-                if metric in ['carbon_load', 'mem_waste']:
+                if metric in ['carbon_load', 'mem_waste_gb_hour']:
                     rank_color = '\033[95m'  # Magenta color for the most CO2 heavy entry
                 else:
                     rank_color = '\033[32m'  # Green color for the most efficient entry
@@ -445,7 +464,7 @@ def print_results(df, query_user, top_n = 5):
 
 
             # Print the rank, username, the horizontal bar with the 'Result' value ,
-            if metric in ['carbon_load', 'mem_waste']:
+            if metric in ['carbon_load', 'mem_waste_gb_hour']:
                 print(f"{rank_color}{padded_rank}. {padded_username} |{'■' * bar_length}{' ' * (max_bar_length - bar_length)}| {result:,}")
             else:
                 print(f"{rank_color}{padded_rank}. {padded_username} |{'■' * bar_length}{' ' * (max_bar_length - bar_length)}| {result:.2%}")

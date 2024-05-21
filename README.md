@@ -52,15 +52,24 @@ Install the dependencies listed in the `requirements.txt` file. You can do this 
 
 `pip install -r requirements.txt`
 
-### Step 3: Run the scraper
+### Step 3: Set up the scraper
 
-TorqueDork uses a scraper to scrape the Torque database. This scraper is called `scrapeTorque.py`. Shortly, this scraper will query the Torque database and store the results in a `sqlite3` database.
+TorqueDork uses a script to scrape the Torque logs. This script is called `scrapeTorque.py`. Shortly, this script will read the Torque log files and store the results in a `sqlite3` database.
 Run the scraper by typing `python scrapeTorque.py` in the commandline. This will create a `sqlite3` database at the path which you provided with the `--log_db` flag. If you did not provide a path, the database will be created in the same folder as the scraper.
 
-### Step 4: Enjoy your fresh results
+**NB** You probably want to avoid having to run the scraper manually every time you want to use `TorqueDork`. To avoid this, you can set up a cron job that runs the scraper at a regular interval. This way, you will always have an updated database with all the records. To do so you can run `crontab -e` in the terminal and add a line like this:
+
+`0 0 * * * /path/to/python /path/to/scrapeTorque.py`
+
+### Step 4: Update the config file
+
+You will need to update the `config.yaml` before you can use `TorqueDork`. In the config file you can specify your specific location, hardware and other settings. This is necessary in order to determine the energy use and the emissions related to the jobs. There are a number of default values you can use. These are contained in reference files in the `reference_data\` folder. See the `config.yaml` file for more information.
+For users in Denmark, there are an additional set of files that will allow users to calculate their emissions very precisely. See more in the `README_ScienceFarts.md` file.
+
+### Step 5: Enjoy your fresh new tool
 
 Now that you have a database with all the records, you can run `TorqueDork`. This is done by typing `python torqueDork.py` in the commandline. This will print a report to the screen. If you want to customize the report, you can use the flags described above.
 
 ## ScienceFarts
 
-`ScienceFarts` is a another small script that I build for use with `TorqueDork`. It is a small script that estimates the carbon footprint of a job. It can also be used to calculate the cumulative footprint from a `snakemake`log file or to estimate the carbon footprint of a future job, given the resources it will use. You can read more about `ScienceFarts` in the `README_ScienceFarts.md` file.
+`ScienceFarts` is a small script built for use with `TorqueDork`. It is a small script that estimates the carbon footprint of a finished job. It can also be used to calculate the cumulative footprint from a `snakemake`log file or to estimate the carbon footprint of a future job, given the resources it will use. You can read more about `ScienceFarts` in the `README_ScienceFarts.md` file.

@@ -6,7 +6,7 @@ Created: July 2022 - Updated continously
 
 ## How to use it
 
-ScienceFarts is a small script I have written for you to evaluate the energy use and co2 emissions of your job/script. It can also be used by the end of a snakemake pipeline.
+ScienceFarts is a small script written for you to evaluate the energy use and co2 emissions of your job/script. It can also be used by the end of a snakemake pipeline.
 There are two different cases in which you can use ScienceFarts:
 
 1.  You want to check the emissions of a job with a known job ID.
@@ -80,16 +80,17 @@ The script is very simple. What it does is basically this:
 2.  If a logfile has been provided then read throug the logfile and extract job IDs.
 3.  Fetch the logs for those job IDs and then extract information on start/end time as well as cpu time and cores used.
 4.	Use the formula `(time_end - time_start) * cores * pr_core_energy_use + (time_end - time_start) * GPUs * pr_gpu_energy_use` to calculate the energy use. Here, I have assumed a energy use per core of 15 W and a per GPU use of 400 W.
-5.	Look up the co2 emissions per kWh in a table built with data from [energidataportal.dk](www.energidataportal.dk).
+5.	Look up the co2 emissions per kWh in a table
 6.	Convert the emissions to more identifiable units such as cycles on a washing machine or kms in a car.
 7.	Print report
 
 
-Most of the steps above probably don't need further explanations except for step 5, the conversion from energy units to co2 emission units. To make the conversion I downloaded a year's worth of energy emissions data from [energidataportal.dk](www.energidataportal.dk), the data service of EnergiNet - an organization within the Danish Ministry of Climate, Energy and Utilities. Here they have data on energy emissions every 5 minutes starting from 2017. Since the relative emissions of energy use are falling as more renewable energy is being installed I have chosen only to use the emissions data from the last year (March 2021 - February 2022).
+Most of the steps above probably don't need further explanations except for step 5, the conversion from energy units to co2 emission units. This is done with a set of reference values for each country. So if you are based in Hungary for example, the emission factor for energy in Hungary will be used. 
 
-What I have then done is calculate averages of each hour of every month meaning that for each month I calculate 24 values: 00 o-clock, 01 o-clock, 02 o-clock and so on. This is assuming that the biggest differences in emissions are between different times of the day as well as different times of the year. In the end this leaves me with a table of 24x12 cells representing the mean co2 emission per kWh for each clock-hour of every month.
+### Note on the emissions data from Denmark
 
-When calculating the emissions of a finished snakemake pipeline the start and end times are used to create a matrix of "hours" in which the pipeline was running. So for example if a pipeline ran for 48 hours from May 12th 12:00 to May 14th 12:00 the matrix would show 2 hours in "May 12:00", 2 hours in "May 13:00" and so on. This matrix is then multiplied with the mounth-hour emissions data to generate the final figure.
+For Denmark there are data with extra resolution. For these data I downloaded a year's worth of energy emissions data from [energidataportal.dk](www.energidataportal.dk), the data service of EnergiNet - an organization within the Danish Ministry of Climate, Energy and Utilities. Here they have data on energy emissions every 5 minutes starting from 2017. Since the relative emissions of energy use are falling as more renewable energy is being installed I have chosen only to use the emissions data from the last year.
+What I have then done is calculate averages of each hour of every month meaning that for each month I calculate 24 values: 00 o-clock, 01 o-clock, 02 o-clock and so on. This is assuming that the biggest differences in emissions are between different times of the day as well as different times of the year. In the end this leaves me with a table of 24x12 cells representing the mean co2 emission per kWh for each clock-hour of every month. When calculating the emissions of a finished snakemake pipeline the start and end times are used to create a matrix of "hours" in which the pipeline was running. So for example if a pipeline ran for 48 hours from May 12th 12:00 to May 14th 12:00 the matrix would show 2 hours in "May 12:00", 2 hours in "May 13:00" and so on. This matrix is then multiplied with the mounth-hour emissions data to generate the final figure.
 
 ## Inspiration
 

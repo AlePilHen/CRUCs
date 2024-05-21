@@ -2,7 +2,7 @@ energy:
   cpu_core:
     kW: 0.015
     Reference: "Personal communication: Piotr"
-  mem_16GB:
+  mem_watts_pr_GB:
     kW: 0.005
     Reference: "https://www.tomshardware.com/reviews/intel-core-i7-5960x-haswell-e-cpu,3918-13.html"
   gpu_full:
@@ -15,6 +15,12 @@ prices:
   gpu_hour: 
     DKK: 0.45
     Reference: "https://www.computerome.dk/pricing"
+  carbon_ton_price_min:
+    EUR: 60
+    Reference: "https://ember-climate.org/data/data-tools/carbon-price-viewer/"
+  carbon_ton_price_max:
+    EUR: 100
+    Reference: "https://ember-climate.org/data/data-tools/carbon-price-viewer/"
 emissions:
   washing_machine_cycle:
     CO2: 100
@@ -28,10 +34,5 @@ emissions:
   flight_cph_lon:
     CO2: 150000
     Reference: "https://calculator.carbonfootprint.com/calculator.aspx?tab=3"
-  ton_offset_min:
-    CO2: 100
-    Reference: "https://terrapass.co.uk/product/personal-carbon-offset-grouped"
-  ton_offset_max:
-    CO2: 400
-    Reference: "https://naturfonden.dk"
+
   
