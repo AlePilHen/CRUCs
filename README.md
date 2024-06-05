@@ -1,4 +1,7 @@
- # CRUCs
+ # CRUCs - Calculator of Resource Use on Clusters
+
+<img src="logo/CRUCs_logo.png?raw=true" alt="CRUC_logo" width="600">
+
 
 Author: Alexander Pil Henriksen
 
