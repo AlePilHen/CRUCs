@@ -1,4 +1,4 @@
-## CONFIGURATION FILE FOR SCIENCEFARTS
+## CONFIGURATION FILE FOR CRUCs
 ## -----------------------------------
 
 # Specification of the cluster / server
@@ -68,7 +68,7 @@ references:
     # 1) Specify the carbon intensity in gCO2/kWh in the "carbon_intensity" field
     # 2) Specify the path to a file with carbon intensity data in the "emissions_file" field
     #    The file should have a similar format to reference_data/MonthHour_emissions.tsv, 
-    #    which is described in more detail in the README_ScienceFarts.md file.
+    #    which is described in more detail in the README_CarbonMeter.md file.
 
     carbon_intensity:  # Carbon intensity in gCO2/kWh
     custom_intensity_file: "DK_MonthHour_emissions.tsv"  # File with detailed carbon intensity data from Denmark

@@ -1,10 +1,8 @@
 """
-    Author: Alexander Henriksen
-    Data: February 2023
     Description: This script was made to scrape a set of toque accounting files
                  to extract all information on use of CPUs, memory and time.
                  It then outputs this information into a sqlite database, which can 
-                 be used by the torqueDork.py script to calculate statistics.
+                 be used by the CRUCs.py script to calculate statistics.
     
     Input:
         1) A torque accounting file (-p)
@@ -19,12 +17,6 @@
            
     USAGE:
         python scrapeTorque.py <torque_logfile> 
-
-    IDEAS:
-        - Create a second table that includes summary statistics for each user.
-          This could be ordered by Year, Month, Week and so on.
-          This would mean that calling torqueDork doesn't require a calculation
-          of summary stats, but simply a retrieval of them
 """
 
 import pandas as pd
